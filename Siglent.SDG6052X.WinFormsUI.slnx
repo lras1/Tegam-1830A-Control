@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Siglent.SDG6052X.DeviceLibrary/Siglent.SDG6052X.DeviceLibrary.csproj" />
+  <Project Path="Siglent.SDG6052X.Tests/Siglent.SDG6052X.Tests.csproj" />
+  <Project Path="Siglent.SDG6052X.WinFormsUI/Siglent.SDG6052X.WinFormsUI.csproj" />
+</Solution>
