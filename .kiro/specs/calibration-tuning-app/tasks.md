@@ -152,7 +152,7 @@ This implementation plan creates a WinForms application that integrates the exis
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.6, 12.4_
 
 - [ ] 10. Implement configuration persistence
-  - [-] 10.1 Wire ConfigurationController to application lifecycle
+  - [x] 10.1 Wire ConfigurationController to application lifecycle
     - Load device IP addresses on MainForm load
     - Load last tuning parameters on MainForm load
     - Load last log file path on MainForm load
@@ -208,7 +208,7 @@ This implementation plan creates a WinForms application that integrates the exis
     - Verify error messages and recovery options
     - _Requirements: 1.5, 7.6, 10.1, 10.2, 10.3, 10.4_
 
-- [~] 14. Final checkpoint - Ensure all tests pass
+- [x] 14. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

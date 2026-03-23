@@ -34,7 +34,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Bcl.AsyncInterfaces">
-      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.7.0.0\lib\net461\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.7.0.0\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Extensions.DependencyInjection">
       <HintPath>..\packages\Microsoft.Extensions.DependencyInjection.7.0.0\lib\net462\Microsoft.Extensions.DependencyInjection.dll</HintPath>

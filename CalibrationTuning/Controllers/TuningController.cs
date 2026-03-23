@@ -244,7 +244,7 @@ namespace CalibrationTuning.Controllers
                 if (!setWaveformResult.Success)
                 {
                     CurrentState = TuningState.Error;
-                    OnErrorOccurred("Failed to configure signal generator: " + setWaveformResult.ErrorMessage);
+                    OnErrorOccurred("Failed to configure signal generator: " + setWaveformResult.Message);
                     return;
                 }
 
@@ -253,7 +253,7 @@ namespace CalibrationTuning.Controllers
                     parameters.FrequencyHz, 
                     Tegam._1830A.DeviceLibrary.Models.FrequencyUnit.Hz);
 
-                if (!setFreqResult.Success)
+                if (!setFreqResult.IsSuccess)
                 {
                     CurrentState = TuningState.Error;
                     OnErrorOccurred("Failed to configure power meter frequency: " + setFreqResult.ErrorMessage);
@@ -262,7 +262,7 @@ namespace CalibrationTuning.Controllers
 
                 // Configure power meter sensor
                 var setSensorResult = _powerMeterService.SelectSensor(parameters.SensorId);
-                if (!setSensorResult.Success)
+                if (!setSensorResult.IsSuccess)
                 {
                     CurrentState = TuningState.Error;
                     OnErrorOccurred("Failed to select power meter sensor: " + setSensorResult.ErrorMessage);
@@ -274,7 +274,7 @@ namespace CalibrationTuning.Controllers
                 if (!enableOutputResult.Success)
                 {
                     CurrentState = TuningState.Error;
-                    OnErrorOccurred("Failed to enable signal generator output: " + enableOutputResult.ErrorMessage);
+                    OnErrorOccurred("Failed to enable signal generator output: " + enableOutputResult.Message);
                     return;
                 }
 
@@ -473,7 +473,7 @@ namespace CalibrationTuning.Controllers
                     {
                         CurrentState = TuningState.Error;
                         await _signalGeneratorService.SetOutputStateAsync(1, false);
-                        OnErrorOccurred("Failed to update signal generator voltage: " + updateResult.ErrorMessage);
+                        OnErrorOccurred("Failed to update signal generator voltage: " + updateResult.Message);
                         return;
                     }
 
@@ -619,11 +619,7 @@ namespace CalibrationTuning.Controllers
         /// </summary>
         private void OnStateChanged(TuningState previousState, TuningState newState)
         {
-            StateChanged?.Invoke(this, new TuningStateChangedEventArgs
-            {
-                PreviousState = previousState,
-                NewState = newState
-            });
+            StateChanged?.Invoke(this, new TuningStateChangedEventArgs(previousState, newState));
         }
 
         /// <summary>
@@ -631,10 +627,7 @@ namespace CalibrationTuning.Controllers
         /// </summary>
         private void OnProgressUpdated()
         {
-            ProgressUpdated?.Invoke(this, new TuningProgressEventArgs
-            {
-                Statistics = _statistics
-            });
+            ProgressUpdated?.Invoke(this, new TuningProgressEventArgs(_statistics));
         }
 
         /// <summary>
@@ -642,10 +635,7 @@ namespace CalibrationTuning.Controllers
         /// </summary>
         private void OnTuningCompleted(TuningResult result)
         {
-            TuningCompleted?.Invoke(this, new TuningCompletedEventArgs
-            {
-                Result = result
-            });
+            TuningCompleted?.Invoke(this, new TuningCompletedEventArgs(result));
         }
 
         /// <summary>
