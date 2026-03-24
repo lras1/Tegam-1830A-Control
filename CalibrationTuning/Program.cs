@@ -66,16 +66,34 @@ namespace CalibrationTuning
             }
 
             // Register common device library dependencies (same for both real and simulated)
+            // Tegam dependencies
             services.AddSingleton<IScpiCommandBuilder, ScpiCommandBuilder>();
             services.AddSingleton<IScpiResponseParser, ScpiResponseParser>();
             services.AddSingleton<IInputValidator, InputValidator>();
+            
+            // Siglent dependencies
             services.AddSingleton<SiglentCmd.IScpiCommandBuilder, SiglentCmd.ScpiCommandBuilder>();
             services.AddSingleton<SiglentParse.IScpiResponseParser, SiglentParse.ScpiResponseParser>();
             services.AddSingleton<SiglentVal.IInputValidator, SiglentVal.InputValidator>();
             
-            // Register device services
-            services.AddSingleton<IPowerMeterService, PowerMeterService>();
-            services.AddSingleton<ISignalGeneratorService, SignalGeneratorService>();
+            // Register device services with explicit factory methods to avoid DI ambiguity
+            services.AddSingleton<IPowerMeterService>(sp =>
+            {
+                var commManager = sp.GetRequiredService<Tegam._1830A.DeviceLibrary.Communication.IVisaCommunicationManager>();
+                var cmdBuilder = sp.GetRequiredService<IScpiCommandBuilder>();
+                var responseParser = sp.GetRequiredService<IScpiResponseParser>();
+                var validator = sp.GetRequiredService<IInputValidator>();
+                return new PowerMeterService(commManager, cmdBuilder, responseParser, validator);
+            });
+            
+            services.AddSingleton<ISignalGeneratorService>(sp =>
+            {
+                var commManager = sp.GetRequiredService<SiglentComm.IVisaCommunicationManager>();
+                var cmdBuilder = sp.GetRequiredService<SiglentCmd.IScpiCommandBuilder>();
+                var responseParser = sp.GetRequiredService<SiglentParse.IScpiResponseParser>();
+                var validator = sp.GetRequiredService<SiglentVal.IInputValidator>();
+                return new SignalGeneratorService(commManager, cmdBuilder, responseParser, validator);
+            });
             
             // Register controllers
             services.AddSingleton<ITuningController, TuningController>();
