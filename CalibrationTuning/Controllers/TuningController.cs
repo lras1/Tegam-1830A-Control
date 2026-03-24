@@ -550,68 +550,71 @@ namespace CalibrationTuning.Controllers
         /// Performs a single manual power measurement.
         /// </summary>
         /// <returns>The measured power value.</returns>
-        public async Task<PowerMeasurement> MeasureManualAsync()
+        public Task<PowerMeasurement> MeasureManualAsync()
         {
-            // Verify devices are connected
-            if (!_powerMeterService.IsConnected)
+            return Task.Run(() =>
             {
-                OnErrorOccurred("Power meter is not connected");
-                return new PowerMeasurement
+                // Verify devices are connected
+                if (!_powerMeterService.IsConnected)
                 {
-                    IsValid = false,
-                    ErrorMessage = "Power meter is not connected",
-                    Timestamp = DateTime.Now
-                };
-            }
-
-            // Verify not currently tuning
-            if (CurrentState == TuningState.Tuning || 
-                CurrentState == TuningState.Measuring || 
-                CurrentState == TuningState.Evaluating)
-            {
-                OnErrorOccurred("Cannot perform manual measurement while tuning is active");
-                return new PowerMeasurement
-                {
-                    IsValid = false,
-                    ErrorMessage = "Cannot perform manual measurement while tuning is active",
-                    Timestamp = DateTime.Now
-                };
-            }
-
-            try
-            {
-                // Perform measurement
-                var powerMeasurement = _powerMeterService.MeasurePower();
-                
-                if (powerMeasurement == null)
-                {
-                    OnErrorOccurred("Failed to measure power from power meter");
+                    OnErrorOccurred("Power meter is not connected");
                     return new PowerMeasurement
                     {
                         IsValid = false,
-                        ErrorMessage = "Failed to measure power from power meter",
+                        ErrorMessage = "Power meter is not connected",
                         Timestamp = DateTime.Now
                     };
                 }
 
-                // Return successful measurement
-                return new PowerMeasurement
+                // Verify not currently tuning
+                if (CurrentState == TuningState.Tuning || 
+                    CurrentState == TuningState.Measuring || 
+                    CurrentState == TuningState.Evaluating)
                 {
-                    PowerDbm = powerMeasurement.PowerValue,
-                    IsValid = true,
-                    Timestamp = DateTime.Now
-                };
-            }
-            catch (Exception ex)
-            {
-                OnErrorOccurred("Manual measurement error: " + ex.Message);
-                return new PowerMeasurement
+                    OnErrorOccurred("Cannot perform manual measurement while tuning is active");
+                    return new PowerMeasurement
+                    {
+                        IsValid = false,
+                        ErrorMessage = "Cannot perform manual measurement while tuning is active",
+                        Timestamp = DateTime.Now
+                    };
+                }
+
+                try
                 {
-                    IsValid = false,
-                    ErrorMessage = ex.Message,
-                    Timestamp = DateTime.Now
-                };
-            }
+                    // Perform measurement
+                    var powerMeasurement = _powerMeterService.MeasurePower();
+                
+                    if (powerMeasurement == null)
+                    {
+                        OnErrorOccurred("Failed to measure power from power meter");
+                        return new PowerMeasurement
+                        {
+                            IsValid = false,
+                            ErrorMessage = "Failed to measure power from power meter",
+                            Timestamp = DateTime.Now
+                        };
+                    }
+
+                    // Return successful measurement
+                    return new PowerMeasurement
+                    {
+                        PowerDbm = powerMeasurement.PowerValue,
+                        IsValid = true,
+                        Timestamp = DateTime.Now
+                    };
+                }
+                catch (Exception ex)
+                {
+                    OnErrorOccurred("Manual measurement error: " + ex.Message);
+                    return new PowerMeasurement
+                    {
+                        IsValid = false,
+                        ErrorMessage = ex.Message,
+                        Timestamp = DateTime.Now
+                    };
+                }
+            });
         }
 
         /// <summary>
