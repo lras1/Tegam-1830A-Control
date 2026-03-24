@@ -198,23 +198,26 @@ namespace CalibrationTuning.Controllers
         /// </summary>
         /// <param name="powerMeterIp">IP address of the power meter.</param>
         /// <returns>True if connected successfully, false otherwise.</returns>
-        public async Task<bool> ConnectPowerMeterAsync(string powerMeterIp)
+        public Task<bool> ConnectPowerMeterAsync(string powerMeterIp)
         {
-            try
+            return Task.Run(() =>
             {
-                bool powerMeterConnected = _powerMeterService.Connect(powerMeterIp);
-                if (!powerMeterConnected)
+                try
                 {
-                    OnErrorOccurred("Failed to connect to power meter at " + powerMeterIp);
+                    bool powerMeterConnected = _powerMeterService.Connect(powerMeterIp);
+                    if (!powerMeterConnected)
+                    {
+                        OnErrorOccurred("Failed to connect to power meter at " + powerMeterIp);
+                        return false;
+                    }
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    OnErrorOccurred("Power meter connection error: " + ex.Message);
                     return false;
                 }
-                return true;
-            }
-            catch (Exception ex)
-            {
-                OnErrorOccurred("Power meter connection error: " + ex.Message);
-                return false;
-            }
+            });
         }
 
         /// <summary>
