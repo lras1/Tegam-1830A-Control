@@ -61,6 +61,18 @@ namespace CalibrationTuning
                 Dock = DockStyle.Fill
             };
             _tuningTab.Controls.Add(_tuningPanel);
+            
+            // Add placeholder label to Chart tab
+            var chartPlaceholder = new Label
+            {
+                Text = "Chart visualization not yet implemented.\n\n" +
+                       "This tab will display real-time power vs voltage charts during tuning.",
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font(this.Font.FontFamily, 10, FontStyle.Italic),
+                ForeColor = Color.Gray
+            };
+            _chartTab.Controls.Add(chartPlaceholder);
         }
 
         private void InitializeEventHandlers()
@@ -87,7 +99,17 @@ namespace CalibrationTuning
             SaveConfiguration();
             
             // Disconnect devices if connected
-            _tuningController.DisconnectDevices();
+            try
+            {
+                _tuningController.DisconnectDevices();
+            }
+            catch
+            {
+                // Ignore errors during shutdown
+            }
+            
+            // Force application exit to clean up any lingering threads
+            Application.Exit();
         }
 
         private void TuningController_StateChanged(object sender, Events.TuningStateChangedEventArgs e)

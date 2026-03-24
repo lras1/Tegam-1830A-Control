@@ -212,6 +212,18 @@ namespace CalibrationTuning.UserControls
                     _powerMeterStatusLabel.ForeColor = Color.Red;
                     _powerMeterConnected = false;
                     _mainForm.UpdateConnectionStatus(_powerMeterConnected, _signalGenConnected);
+                    
+                    // Show error details to help diagnose the issue
+                    MessageBox.Show(
+                        "Failed to connect to Power Meter.\n\n" +
+                        "Check that:\n" +
+                        "- The IP address is correct\n" +
+                        "- The device is powered on and connected to the network\n" +
+                        "- No firewall is blocking the connection\n\n" +
+                        "In simulation mode, this should connect automatically.",
+                        "Connection Failed",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
                 }
             }
             catch (Exception ex)
@@ -285,6 +297,18 @@ namespace CalibrationTuning.UserControls
                     _signalGenStatusLabel.ForeColor = Color.Red;
                     _signalGenConnected = false;
                     _mainForm.UpdateConnectionStatus(_powerMeterConnected, _signalGenConnected);
+                    
+                    // Show error details to help diagnose the issue
+                    MessageBox.Show(
+                        "Failed to connect to Signal Generator.\n\n" +
+                        "Check that:\n" +
+                        "- The IP address is correct\n" +
+                        "- The device is powered on and connected to the network\n" +
+                        "- No firewall is blocking the connection\n\n" +
+                        "In simulation mode, this should connect automatically.",
+                        "Connection Failed",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
                 }
             }
             catch (Exception ex)

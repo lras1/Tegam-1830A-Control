@@ -631,8 +631,9 @@ namespace CalibrationTuning.UserControls
 
         private void UpdateControlStates(bool isTuning = false)
         {
-            // Disable all input controls when tuning is active or devices are disconnected
-            bool enableInputs = !isTuning && _devicesConnected;
+            // Input controls should always be enabled when not tuning
+            // Users need to configure parameters before connecting devices
+            bool enableInputs = !isTuning;
 
             _frequencyTextBox.Enabled = enableInputs;
             _initialVoltageTextBox.Enabled = enableInputs;
