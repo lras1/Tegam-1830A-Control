@@ -20,14 +20,18 @@ namespace CalibrationTuning.UserControls
         private Label _powerMeterIpLabel;
         private TextBox _powerMeterIpTextBox;
         private Label _powerMeterStatusLabel;
+        private Button _powerMeterConnectButton;
+        private Button _powerMeterDisconnectButton;
 
         private GroupBox _signalGenGroup;
         private Label _signalGenIpLabel;
         private TextBox _signalGenIpTextBox;
         private Label _signalGenStatusLabel;
+        private Button _signalGenConnectButton;
+        private Button _signalGenDisconnectButton;
 
-        private Button _connectButton;
-        private Button _disconnectButton;
+        private bool _powerMeterConnected = false;
+        private bool _signalGenConnected = false;
 
         public ConnectionPanel(ITuningController tuningController, MainForm mainForm)
         {
@@ -52,7 +56,7 @@ namespace CalibrationTuning.UserControls
             {
                 Text = "Power Meter (Tegam 1830A)",
                 Location = new Point(10, 10),
-                Size = new Size(560, 100),
+                Size = new Size(560, 120),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
@@ -80,16 +84,35 @@ namespace CalibrationTuning.UserControls
                 ForeColor = Color.Red
             };
 
+            _powerMeterConnectButton = new Button
+            {
+                Text = "Connect",
+                Location = new Point(15, 85),
+                Size = new Size(90, 25)
+            };
+            _powerMeterConnectButton.Click += PowerMeterConnectButton_Click;
+
+            _powerMeterDisconnectButton = new Button
+            {
+                Text = "Disconnect",
+                Location = new Point(115, 85),
+                Size = new Size(90, 25),
+                Enabled = false
+            };
+            _powerMeterDisconnectButton.Click += PowerMeterDisconnectButton_Click;
+
             _powerMeterGroup.Controls.Add(_powerMeterIpLabel);
             _powerMeterGroup.Controls.Add(_powerMeterIpTextBox);
             _powerMeterGroup.Controls.Add(_powerMeterStatusLabel);
+            _powerMeterGroup.Controls.Add(_powerMeterConnectButton);
+            _powerMeterGroup.Controls.Add(_powerMeterDisconnectButton);
 
             // Signal Generator Group
             _signalGenGroup = new GroupBox
             {
                 Text = "Signal Generator (Siglent SDG6052X)",
-                Location = new Point(10, 120),
-                Size = new Size(560, 100),
+                Location = new Point(10, 140),
+                Size = new Size(560, 120),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
@@ -117,36 +140,32 @@ namespace CalibrationTuning.UserControls
                 ForeColor = Color.Red
             };
 
+            _signalGenConnectButton = new Button
+            {
+                Text = "Connect",
+                Location = new Point(15, 85),
+                Size = new Size(90, 25)
+            };
+            _signalGenConnectButton.Click += SignalGenConnectButton_Click;
+
+            _signalGenDisconnectButton = new Button
+            {
+                Text = "Disconnect",
+                Location = new Point(115, 85),
+                Size = new Size(90, 25),
+                Enabled = false
+            };
+            _signalGenDisconnectButton.Click += SignalGenDisconnectButton_Click;
+
             _signalGenGroup.Controls.Add(_signalGenIpLabel);
             _signalGenGroup.Controls.Add(_signalGenIpTextBox);
             _signalGenGroup.Controls.Add(_signalGenStatusLabel);
-
-            // Connect Button
-            _connectButton = new Button
-            {
-                Text = "Connect",
-                Location = new Point(10, 230),
-                Size = new Size(100, 30),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left
-            };
-            _connectButton.Click += ConnectButton_Click;
-
-            // Disconnect Button
-            _disconnectButton = new Button
-            {
-                Text = "Disconnect",
-                Location = new Point(120, 230),
-                Size = new Size(100, 30),
-                Enabled = false,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left
-            };
-            _disconnectButton.Click += DisconnectButton_Click;
+            _signalGenGroup.Controls.Add(_signalGenConnectButton);
+            _signalGenGroup.Controls.Add(_signalGenDisconnectButton);
 
             // Add controls to panel
             this.Controls.Add(_powerMeterGroup);
             this.Controls.Add(_signalGenGroup);
-            this.Controls.Add(_connectButton);
-            this.Controls.Add(_disconnectButton);
 
             this.ResumeLayout(false);
         }
@@ -158,25 +177,87 @@ namespace CalibrationTuning.UserControls
             _tuningController.ErrorOccurred += TuningController_ErrorOccurred;
         }
 
-        private async void ConnectButton_Click(object sender, EventArgs e)
+        private async void PowerMeterConnectButton_Click(object sender, EventArgs e)
         {
             try
             {
-                // Disable controls during connection attempt
-                _connectButton.Enabled = false;
+                _powerMeterConnectButton.Enabled = false;
                 _powerMeterIpTextBox.Enabled = false;
-                _signalGenIpTextBox.Enabled = false;
 
                 string powerMeterIp = _powerMeterIpTextBox.Text.Trim();
-                string signalGenIp = _signalGenIpTextBox.Text.Trim();
 
-                // Validate IP addresses
                 if (string.IsNullOrWhiteSpace(powerMeterIp))
                 {
                     MessageBox.Show("Please enter a valid Power Meter IP address.", "Validation Error", 
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
+
+                _powerMeterStatusLabel.Text = "Status: Connecting...";
+                _powerMeterStatusLabel.ForeColor = Color.Orange;
+
+                bool success = await _tuningController.ConnectPowerMeterAsync(powerMeterIp);
+
+                if (success)
+                {
+                    _powerMeterStatusLabel.Text = "Status: Connected";
+                    _powerMeterStatusLabel.ForeColor = Color.Green;
+                    _powerMeterDisconnectButton.Enabled = true;
+                    _powerMeterConnected = true;
+                    _mainForm.UpdateConnectionStatus(_powerMeterConnected, _signalGenConnected);
+                }
+                else
+                {
+                    _powerMeterStatusLabel.Text = "Status: Connection Failed";
+                    _powerMeterStatusLabel.ForeColor = Color.Red;
+                    _powerMeterConnected = false;
+                    _mainForm.UpdateConnectionStatus(_powerMeterConnected, _signalGenConnected);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Connection error: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _powerMeterStatusLabel.Text = "Status: Error";
+                _powerMeterStatusLabel.ForeColor = Color.Red;
+                _powerMeterConnected = false;
+                _mainForm.UpdateConnectionStatus(_powerMeterConnected, _signalGenConnected);
+            }
+            finally
+            {
+                _powerMeterConnectButton.Enabled = true;
+                _powerMeterIpTextBox.Enabled = true;
+            }
+        }
+
+        private void PowerMeterDisconnectButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                _tuningController.DisconnectPowerMeter();
+                _powerMeterStatusLabel.Text = "Status: Disconnected";
+                _powerMeterStatusLabel.ForeColor = Color.Red;
+                _powerMeterConnectButton.Enabled = true;
+                _powerMeterDisconnectButton.Enabled = false;
+                _powerMeterIpTextBox.Enabled = true;
+                _powerMeterConnected = false;
+                _mainForm.UpdateConnectionStatus(_powerMeterConnected, _signalGenConnected);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Disconnection error: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void SignalGenConnectButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                _signalGenConnectButton.Enabled = false;
+                _signalGenIpTextBox.Enabled = false;
+
+                string signalGenIp = _signalGenIpTextBox.Text.Trim();
 
                 if (string.IsNullOrWhiteSpace(signalGenIp))
                 {
@@ -185,89 +266,55 @@ namespace CalibrationTuning.UserControls
                     return;
                 }
 
-                // Update status labels
-                _powerMeterStatusLabel.Text = "Status: Connecting...";
-                _powerMeterStatusLabel.ForeColor = Color.Orange;
                 _signalGenStatusLabel.Text = "Status: Connecting...";
                 _signalGenStatusLabel.ForeColor = Color.Orange;
 
-                // Attempt connection
-                bool success = await _tuningController.ConnectDevicesAsync(powerMeterIp, signalGenIp);
+                bool success = await _tuningController.ConnectSignalGeneratorAsync(signalGenIp);
 
                 if (success)
                 {
-                    // Update status labels
-                    _powerMeterStatusLabel.Text = "Status: Connected";
-                    _powerMeterStatusLabel.ForeColor = Color.Green;
                     _signalGenStatusLabel.Text = "Status: Connected";
                     _signalGenStatusLabel.ForeColor = Color.Green;
-
-                    // Update button states
-                    _disconnectButton.Enabled = true;
-
-                    // Update main form status bar
-                    _mainForm.UpdateConnectionStatus(true, true);
-
-                    MessageBox.Show("Successfully connected to both devices.", "Connection Success", 
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    _signalGenDisconnectButton.Enabled = true;
+                    _signalGenConnected = true;
+                    _mainForm.UpdateConnectionStatus(_powerMeterConnected, _signalGenConnected);
                 }
                 else
                 {
-                    // Error occurred - status labels will be updated by error event handler
-                    _powerMeterStatusLabel.Text = "Status: Connection Failed";
-                    _powerMeterStatusLabel.ForeColor = Color.Red;
                     _signalGenStatusLabel.Text = "Status: Connection Failed";
                     _signalGenStatusLabel.ForeColor = Color.Red;
-
-                    // Update main form status bar
-                    _mainForm.UpdateConnectionStatus(false, false);
+                    _signalGenConnected = false;
+                    _mainForm.UpdateConnectionStatus(_powerMeterConnected, _signalGenConnected);
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Connection error: {ex.Message}", "Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-                _powerMeterStatusLabel.Text = "Status: Error";
-                _powerMeterStatusLabel.ForeColor = Color.Red;
                 _signalGenStatusLabel.Text = "Status: Error";
                 _signalGenStatusLabel.ForeColor = Color.Red;
-
-                _mainForm.UpdateConnectionStatus(false, false);
+                _signalGenConnected = false;
+                _mainForm.UpdateConnectionStatus(_powerMeterConnected, _signalGenConnected);
             }
             finally
             {
-                // Re-enable controls
-                _connectButton.Enabled = true;
-                _powerMeterIpTextBox.Enabled = true;
+                _signalGenConnectButton.Enabled = true;
                 _signalGenIpTextBox.Enabled = true;
             }
         }
 
-        private void DisconnectButton_Click(object sender, EventArgs e)
+        private void SignalGenDisconnectButton_Click(object sender, EventArgs e)
         {
             try
             {
-                // Disconnect devices
-                _tuningController.DisconnectDevices();
-
-                // Update status labels
-                _powerMeterStatusLabel.Text = "Status: Disconnected";
-                _powerMeterStatusLabel.ForeColor = Color.Red;
+                _tuningController.DisconnectSignalGenerator();
                 _signalGenStatusLabel.Text = "Status: Disconnected";
                 _signalGenStatusLabel.ForeColor = Color.Red;
-
-                // Update button states
-                _connectButton.Enabled = true;
-                _disconnectButton.Enabled = false;
-                _powerMeterIpTextBox.Enabled = true;
+                _signalGenConnectButton.Enabled = true;
+                _signalGenDisconnectButton.Enabled = false;
                 _signalGenIpTextBox.Enabled = true;
-
-                // Update main form status bar
-                _mainForm.UpdateConnectionStatus(false, false);
-
-                MessageBox.Show("Devices disconnected successfully.", "Disconnection", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                _signalGenConnected = false;
+                _mainForm.UpdateConnectionStatus(_powerMeterConnected, _signalGenConnected);
             }
             catch (Exception ex)
             {

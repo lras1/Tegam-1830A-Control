@@ -194,6 +194,90 @@ namespace CalibrationTuning.Controllers
         }
 
         /// <summary>
+        /// Connects to the power meter only.
+        /// </summary>
+        /// <param name="powerMeterIp">IP address of the power meter.</param>
+        /// <returns>True if connected successfully, false otherwise.</returns>
+        public async Task<bool> ConnectPowerMeterAsync(string powerMeterIp)
+        {
+            try
+            {
+                bool powerMeterConnected = _powerMeterService.Connect(powerMeterIp);
+                if (!powerMeterConnected)
+                {
+                    OnErrorOccurred("Failed to connect to power meter at " + powerMeterIp);
+                    return false;
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                OnErrorOccurred("Power meter connection error: " + ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Disconnects from the power meter only.
+        /// </summary>
+        public void DisconnectPowerMeter()
+        {
+            try
+            {
+                if (_powerMeterService.IsConnected)
+                {
+                    _powerMeterService.Disconnect();
+                }
+            }
+            catch (Exception ex)
+            {
+                OnErrorOccurred("Power meter disconnection error: " + ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Connects to the signal generator only.
+        /// </summary>
+        /// <param name="signalGenIp">IP address of the signal generator.</param>
+        /// <returns>True if connected successfully, false otherwise.</returns>
+        public async Task<bool> ConnectSignalGeneratorAsync(string signalGenIp)
+        {
+            try
+            {
+                bool signalGenConnected = await _signalGeneratorService.ConnectAsync(signalGenIp);
+                if (!signalGenConnected)
+                {
+                    OnErrorOccurred("Failed to connect to signal generator at " + signalGenIp);
+                    return false;
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                OnErrorOccurred("Signal generator connection error: " + ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Disconnects from the signal generator only.
+        /// </summary>
+        public void DisconnectSignalGenerator()
+        {
+            try
+            {
+                if (_signalGeneratorService.IsConnected)
+                {
+                    Task.Run(async () => await _signalGeneratorService.DisconnectAsync()).Wait();
+                }
+            }
+            catch (Exception ex)
+            {
+                OnErrorOccurred("Signal generator disconnection error: " + ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Starts an automated tuning session with the specified parameters.
         /// </summary>
         /// <param name="parameters">Tuning configuration parameters.</param>
