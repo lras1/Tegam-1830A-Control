@@ -79,7 +79,9 @@ namespace CalibrationTuning
             // Register device services with explicit factory methods to avoid DI ambiguity
             services.AddSingleton<IPowerMeterService>(sp =>
             {
+                System.Diagnostics.Debug.WriteLine("[DI] Creating PowerMeterService");
                 var commManager = sp.GetRequiredService<Tegam._1830A.DeviceLibrary.Communication.IVisaCommunicationManager>();
+                System.Diagnostics.Debug.WriteLine($"[DI] PowerMeterService - CommManager type: {commManager.GetType().FullName}");
                 var cmdBuilder = sp.GetRequiredService<IScpiCommandBuilder>();
                 var responseParser = sp.GetRequiredService<IScpiResponseParser>();
                 var validator = sp.GetRequiredService<IInputValidator>();
@@ -88,7 +90,9 @@ namespace CalibrationTuning
             
             services.AddSingleton<ISignalGeneratorService>(sp =>
             {
+                System.Diagnostics.Debug.WriteLine("[DI] Creating SignalGeneratorService");
                 var commManager = sp.GetRequiredService<SiglentComm.IVisaCommunicationManager>();
+                System.Diagnostics.Debug.WriteLine($"[DI] SignalGeneratorService - CommManager type: {commManager.GetType().FullName}");
                 var cmdBuilder = sp.GetRequiredService<SiglentCmd.IScpiCommandBuilder>();
                 var responseParser = sp.GetRequiredService<SiglentParse.IScpiResponseParser>();
                 var validator = sp.GetRequiredService<SiglentVal.IInputValidator>();

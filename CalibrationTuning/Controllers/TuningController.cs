@@ -204,7 +204,10 @@ namespace CalibrationTuning.Controllers
             {
                 try
                 {
+                    System.Diagnostics.Debug.WriteLine($"[TuningController] Attempting to connect to power meter at {powerMeterIp}");
                     bool powerMeterConnected = _powerMeterService.Connect(powerMeterIp);
+                    System.Diagnostics.Debug.WriteLine($"[TuningController] Power meter connection result: {powerMeterConnected}");
+                    
                     if (!powerMeterConnected)
                     {
                         OnErrorOccurred("Failed to connect to power meter at " + powerMeterIp);
@@ -214,6 +217,7 @@ namespace CalibrationTuning.Controllers
                 }
                 catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[TuningController] Power meter connection exception: {ex}");
                     OnErrorOccurred("Power meter connection error: " + ex.Message);
                     return false;
                 }
@@ -247,7 +251,10 @@ namespace CalibrationTuning.Controllers
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine($"[TuningController] Attempting to connect to signal generator at {signalGenIp}");
                 bool signalGenConnected = await _signalGeneratorService.ConnectAsync(signalGenIp);
+                System.Diagnostics.Debug.WriteLine($"[TuningController] Signal generator connection result: {signalGenConnected}");
+                
                 if (!signalGenConnected)
                 {
                     OnErrorOccurred("Failed to connect to signal generator at " + signalGenIp);
@@ -257,6 +264,7 @@ namespace CalibrationTuning.Controllers
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[TuningController] Signal generator connection exception: {ex}");
                 OnErrorOccurred("Signal generator connection error: " + ex.Message);
                 return false;
             }
