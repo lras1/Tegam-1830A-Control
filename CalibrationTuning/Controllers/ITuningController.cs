@@ -76,5 +76,29 @@ namespace CalibrationTuning.Controllers
         /// </summary>
         /// <returns>The measured power value.</returns>
         Task<PowerMeasurement> MeasureManualAsync();
+
+        /// <summary>
+        /// Connects to the power meter only.
+        /// </summary>
+        /// <param name="powerMeterIp">IP address of the power meter.</param>
+        /// <returns>True if connected successfully, false otherwise.</returns>
+        Task<bool> ConnectPowerMeterAsync(string powerMeterIp);
+
+        /// <summary>
+        /// Disconnects from the power meter only.
+        /// </summary>
+        void DisconnectPowerMeter();
+
+        /// <summary>
+        /// Connects to the signal generator only.
+        /// </summary>
+        /// <param name="signalGenIp">IP address of the signal generator.</param>
+        /// <returns>True if connected successfully, false otherwise.</returns>
+        Task<bool> ConnectSignalGeneratorAsync(string signalGenIp);
+
+        /// <summary>
+        /// Disconnects from the signal generator only.
+        /// </summary>
+        void DisconnectSignalGenerator();
     }
 }

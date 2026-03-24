@@ -343,7 +343,8 @@ namespace CalibrationTuning.UserControls
                                   newState == Models.TuningState.Measuring || 
                                   newState == Models.TuningState.Evaluating;
 
-            _disconnectButton.Enabled = !isTuningActive && _disconnectButton.Enabled;
+            _powerMeterDisconnectButton.Enabled = !isTuningActive && _powerMeterConnected;
+            _signalGenDisconnectButton.Enabled = !isTuningActive && _signalGenConnected;
         }
 
         private void TuningController_ErrorOccurred(object sender, ErrorEventArgs e)
