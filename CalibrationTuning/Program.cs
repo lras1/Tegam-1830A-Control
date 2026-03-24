@@ -52,7 +52,7 @@ namespace CalibrationTuning
             {
                 // Register mock/simulated device library dependencies
                 services.AddSingleton<Tegam._1830A.DeviceLibrary.Communication.IVisaCommunicationManager, 
-                    MockVisaCommunicationManager>();
+                    Tegam._1830A.DeviceLibrary.Simulation.MockVisaCommunicationManager>();
                 services.AddSingleton<SiglentComm.IVisaCommunicationManager, 
                     SiglentSim.MockVisaCommunicationManager>();
             }
