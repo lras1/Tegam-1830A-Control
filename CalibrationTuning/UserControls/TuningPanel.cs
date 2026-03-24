@@ -20,34 +20,34 @@ namespace CalibrationTuning.UserControls
         // UI Controls - Signal Configuration
         private GroupBox _signalConfigGroup;
         private Label _frequencyLabel;
-        private TextBox _frequencyTextBox;
+        private NumericUpDown _frequencyNumeric;
         private Label _frequencyUnitLabel;
         private Label _initialVoltageLabel;
-        private TextBox _initialVoltageTextBox;
+        private NumericUpDown _initialVoltageNumeric;
         private Label _initialVoltageUnitLabel;
 
         // UI Controls - Tuning Parameters
         private GroupBox _tuningParamsGroup;
         private Label _setpointLabel;
-        private TextBox _setpointTextBox;
+        private NumericUpDown _setpointNumeric;
         private Label _setpointUnitLabel;
         private Label _toleranceLabel;
-        private TextBox _toleranceTextBox;
+        private NumericUpDown _toleranceNumeric;
         private Label _toleranceUnitLabel;
         private Label _voltageStepLabel;
-        private TextBox _voltageStepTextBox;
+        private NumericUpDown _voltageStepNumeric;
         private Label _voltageStepUnitLabel;
 
         // UI Controls - Safety Limits
         private GroupBox _safetyLimitsGroup;
         private Label _minVoltageLabel;
-        private TextBox _minVoltageTextBox;
+        private NumericUpDown _minVoltageNumeric;
         private Label _minVoltageUnitLabel;
         private Label _maxVoltageLabel;
-        private TextBox _maxVoltageTextBox;
+        private NumericUpDown _maxVoltageNumeric;
         private Label _maxVoltageUnitLabel;
         private Label _maxIterationsLabel;
-        private TextBox _maxIterationsTextBox;
+        private NumericUpDown _maxIterationsNumeric;
 
         // UI Controls - Sensor Selection
         private GroupBox _sensorGroup;
@@ -99,11 +99,15 @@ namespace CalibrationTuning.UserControls
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
-            _frequencyTextBox = new TextBox
+            _frequencyNumeric = new NumericUpDown
             {
                 Location = new Point(120, 28),
                 Size = new Size(150, 20),
-                Text = "2400000000"
+                Minimum = 1,
+                Maximum = 500000000000,  // 500 GHz
+                DecimalPlaces = 0,
+                Value = 2400000000,      // 2.4 GHz
+                ThousandsSeparator = true
             };
 
             _frequencyUnitLabel = new Label
@@ -122,11 +126,15 @@ namespace CalibrationTuning.UserControls
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
-            _initialVoltageTextBox = new TextBox
+            _initialVoltageNumeric = new NumericUpDown
             {
                 Location = new Point(120, 58),
                 Size = new Size(150, 20),
-                Text = "0.5"
+                Minimum = 0.001M,
+                Maximum = 10.0M,
+                DecimalPlaces = 3,
+                Value = 0.5M,
+                Increment = 0.1M
             };
 
             _initialVoltageUnitLabel = new Label
@@ -138,10 +146,10 @@ namespace CalibrationTuning.UserControls
             };
 
             _signalConfigGroup.Controls.Add(_frequencyLabel);
-            _signalConfigGroup.Controls.Add(_frequencyTextBox);
+            _signalConfigGroup.Controls.Add(_frequencyNumeric);
             _signalConfigGroup.Controls.Add(_frequencyUnitLabel);
             _signalConfigGroup.Controls.Add(_initialVoltageLabel);
-            _signalConfigGroup.Controls.Add(_initialVoltageTextBox);
+            _signalConfigGroup.Controls.Add(_initialVoltageNumeric);
             _signalConfigGroup.Controls.Add(_initialVoltageUnitLabel);
 
             this.Controls.Add(_signalConfigGroup);
@@ -164,11 +172,15 @@ namespace CalibrationTuning.UserControls
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
-            _setpointTextBox = new TextBox
+            _setpointNumeric = new NumericUpDown
             {
                 Location = new Point(120, 28),
                 Size = new Size(150, 20),
-                Text = "-10.0"
+                Minimum = -100M,
+                Maximum = 100M,
+                DecimalPlaces = 2,
+                Value = -10.0M,
+                Increment = 0.5M
             };
 
             _setpointUnitLabel = new Label
@@ -187,11 +199,15 @@ namespace CalibrationTuning.UserControls
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
-            _toleranceTextBox = new TextBox
+            _toleranceNumeric = new NumericUpDown
             {
                 Location = new Point(120, 58),
                 Size = new Size(150, 20),
-                Text = "0.5"
+                Minimum = 0.01M,
+                Maximum = 10M,
+                DecimalPlaces = 2,
+                Value = 0.5M,
+                Increment = 0.1M
             };
 
             _toleranceUnitLabel = new Label
@@ -210,11 +226,15 @@ namespace CalibrationTuning.UserControls
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
-            _voltageStepTextBox = new TextBox
+            _voltageStepNumeric = new NumericUpDown
             {
                 Location = new Point(120, 88),
                 Size = new Size(150, 20),
-                Text = "0.05"
+                Minimum = 0.001M,
+                Maximum = 1M,
+                DecimalPlaces = 3,
+                Value = 0.05M,
+                Increment = 0.01M
             };
 
             _voltageStepUnitLabel = new Label
@@ -226,13 +246,13 @@ namespace CalibrationTuning.UserControls
             };
 
             _tuningParamsGroup.Controls.Add(_setpointLabel);
-            _tuningParamsGroup.Controls.Add(_setpointTextBox);
+            _tuningParamsGroup.Controls.Add(_setpointNumeric);
             _tuningParamsGroup.Controls.Add(_setpointUnitLabel);
             _tuningParamsGroup.Controls.Add(_toleranceLabel);
-            _tuningParamsGroup.Controls.Add(_toleranceTextBox);
+            _tuningParamsGroup.Controls.Add(_toleranceNumeric);
             _tuningParamsGroup.Controls.Add(_toleranceUnitLabel);
             _tuningParamsGroup.Controls.Add(_voltageStepLabel);
-            _tuningParamsGroup.Controls.Add(_voltageStepTextBox);
+            _tuningParamsGroup.Controls.Add(_voltageStepNumeric);
             _tuningParamsGroup.Controls.Add(_voltageStepUnitLabel);
 
             this.Controls.Add(_tuningParamsGroup);
@@ -255,11 +275,15 @@ namespace CalibrationTuning.UserControls
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
-            _minVoltageTextBox = new TextBox
+            _minVoltageNumeric = new NumericUpDown
             {
                 Location = new Point(120, 28),
                 Size = new Size(150, 20),
-                Text = "0.1"
+                Minimum = 0M,
+                Maximum = 10M,
+                DecimalPlaces = 3,
+                Value = 0.1M,
+                Increment = 0.1M
             };
 
             _minVoltageUnitLabel = new Label
@@ -278,11 +302,15 @@ namespace CalibrationTuning.UserControls
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
-            _maxVoltageTextBox = new TextBox
+            _maxVoltageNumeric = new NumericUpDown
             {
                 Location = new Point(120, 58),
                 Size = new Size(150, 20),
-                Text = "5.0"
+                Minimum = 0M,
+                Maximum = 10M,
+                DecimalPlaces = 3,
+                Value = 5.0M,
+                Increment = 0.1M
             };
 
             _maxVoltageUnitLabel = new Label
@@ -301,21 +329,25 @@ namespace CalibrationTuning.UserControls
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
-            _maxIterationsTextBox = new TextBox
+            _maxIterationsNumeric = new NumericUpDown
             {
                 Location = new Point(120, 88),
                 Size = new Size(150, 20),
-                Text = "100"
+                Minimum = 1,
+                Maximum = 10000,
+                DecimalPlaces = 0,
+                Value = 100,
+                Increment = 10
             };
 
             _safetyLimitsGroup.Controls.Add(_minVoltageLabel);
-            _safetyLimitsGroup.Controls.Add(_minVoltageTextBox);
+            _safetyLimitsGroup.Controls.Add(_minVoltageNumeric);
             _safetyLimitsGroup.Controls.Add(_minVoltageUnitLabel);
             _safetyLimitsGroup.Controls.Add(_maxVoltageLabel);
-            _safetyLimitsGroup.Controls.Add(_maxVoltageTextBox);
+            _safetyLimitsGroup.Controls.Add(_maxVoltageNumeric);
             _safetyLimitsGroup.Controls.Add(_maxVoltageUnitLabel);
             _safetyLimitsGroup.Controls.Add(_maxIterationsLabel);
-            _safetyLimitsGroup.Controls.Add(_maxIterationsTextBox);
+            _safetyLimitsGroup.Controls.Add(_maxIterationsNumeric);
 
             this.Controls.Add(_safetyLimitsGroup);
             yPosition += 130;
@@ -410,39 +442,40 @@ namespace CalibrationTuning.UserControls
         {
             try
             {
-                // Validate all inputs
-                if (!ValidateInputs(out string validationError))
+                // Build tuning parameters from UI inputs
+                TuningParameters parameters = new TuningParameters
                 {
-                    MessageBox.Show(validationError, "Validation Error", 
+                    FrequencyHz = (double)_frequencyNumeric.Value,
+                    InitialVoltage = (double)_initialVoltageNumeric.Value,
+                    TargetPowerDbm = (double)_setpointNumeric.Value,
+                    ToleranceDb = (double)_toleranceNumeric.Value,
+                    VoltageStepSize = (double)_voltageStepNumeric.Value,
+                    MinVoltage = (double)_minVoltageNumeric.Value,
+                    MaxVoltage = (double)_maxVoltageNumeric.Value,
+                    MaxIterations = (int)_maxIterationsNumeric.Value,
+                    SensorId = _sensorComboBox.SelectedIndex + 1
+                };
+
+                // Validate ranges
+                if (parameters.MinVoltage >= parameters.MaxVoltage)
+                {
+                    MessageBox.Show("Minimum voltage must be less than maximum voltage.", "Validation Error", 
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                // Build tuning parameters from UI inputs
-                TuningParameters parameters = new TuningParameters
+                if (parameters.InitialVoltage < parameters.MinVoltage || parameters.InitialVoltage > parameters.MaxVoltage)
                 {
-                    FrequencyHz = double.Parse(_frequencyTextBox.Text),
-                    InitialVoltage = double.Parse(_initialVoltageTextBox.Text),
-                    TargetPowerDbm = double.Parse(_setpointTextBox.Text),
-                    ToleranceDb = double.Parse(_toleranceTextBox.Text),
-                    VoltageStepSize = double.Parse(_voltageStepTextBox.Text),
-                    MinVoltage = double.Parse(_minVoltageTextBox.Text),
-                    MaxVoltage = double.Parse(_maxVoltageTextBox.Text),
-                    MaxIterations = int.Parse(_maxIterationsTextBox.Text),
-                    SensorId = _sensorComboBox.SelectedIndex + 1
-                };
+                    MessageBox.Show("Initial voltage must be between minimum and maximum voltage.", "Validation Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
 
                 // Disable controls during tuning
                 UpdateControlStates(isTuning: true);
 
                 // Start tuning
                 await _tuningController.StartTuningAsync(parameters);
-            }
-            catch (FormatException)
-            {
-                MessageBox.Show("Invalid numeric input. Please check all values.", "Input Error", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-                UpdateControlStates(isTuning: false);
             }
             catch (Exception ex)
             {
@@ -494,90 +527,6 @@ namespace CalibrationTuning.UserControls
                 // Re-enable button
                 _manualMeasureButton.Enabled = _devicesConnected;
             }
-        }
-
-        private bool ValidateInputs(out string errorMessage)
-        {
-            errorMessage = string.Empty;
-
-            // Validate frequency
-            if (!double.TryParse(_frequencyTextBox.Text, out double frequency) || frequency < 1 || frequency > 500e6)
-            {
-                errorMessage = "Frequency must be between 1 Hz and 500 MHz.";
-                return false;
-            }
-
-            // Validate initial voltage
-            if (!double.TryParse(_initialVoltageTextBox.Text, out double initialVoltage) || initialVoltage <= 0)
-            {
-                errorMessage = "Initial voltage must be greater than 0.";
-                return false;
-            }
-
-            // Validate setpoint
-            if (!double.TryParse(_setpointTextBox.Text, out double setpoint))
-            {
-                errorMessage = "Setpoint must be a valid number.";
-                return false;
-            }
-
-            // Validate tolerance
-            if (!double.TryParse(_toleranceTextBox.Text, out double tolerance) || tolerance <= 0)
-            {
-                errorMessage = "Tolerance must be greater than 0.";
-                return false;
-            }
-
-            // Validate voltage step
-            if (!double.TryParse(_voltageStepTextBox.Text, out double voltageStep) || voltageStep <= 0)
-            {
-                errorMessage = "Voltage step must be greater than 0.";
-                return false;
-            }
-
-            // Validate min voltage
-            if (!double.TryParse(_minVoltageTextBox.Text, out double minVoltage) || minVoltage < 0)
-            {
-                errorMessage = "Minimum voltage must be greater than or equal to 0.";
-                return false;
-            }
-
-            // Validate max voltage
-            if (!double.TryParse(_maxVoltageTextBox.Text, out double maxVoltage) || maxVoltage <= 0)
-            {
-                errorMessage = "Maximum voltage must be greater than 0.";
-                return false;
-            }
-
-            // Validate voltage range
-            if (minVoltage >= maxVoltage)
-            {
-                errorMessage = "Minimum voltage must be less than maximum voltage.";
-                return false;
-            }
-
-            // Validate initial voltage within range
-            if (initialVoltage < minVoltage || initialVoltage > maxVoltage)
-            {
-                errorMessage = "Initial voltage must be between minimum and maximum voltage.";
-                return false;
-            }
-
-            // Validate voltage step
-            if (voltageStep >= maxVoltage)
-            {
-                errorMessage = "Voltage step must be less than maximum voltage.";
-                return false;
-            }
-
-            // Validate max iterations
-            if (!int.TryParse(_maxIterationsTextBox.Text, out int maxIterations) || maxIterations < 1 || maxIterations > 10000)
-            {
-                errorMessage = "Maximum iterations must be between 1 and 10000.";
-                return false;
-            }
-
-            return true;
         }
 
         private void TuningController_StateChanged(object sender, Events.TuningStateChangedEventArgs e)
@@ -635,14 +584,14 @@ namespace CalibrationTuning.UserControls
             // Users need to configure parameters before connecting devices
             bool enableInputs = !isTuning;
 
-            _frequencyTextBox.Enabled = enableInputs;
-            _initialVoltageTextBox.Enabled = enableInputs;
-            _setpointTextBox.Enabled = enableInputs;
-            _toleranceTextBox.Enabled = enableInputs;
-            _voltageStepTextBox.Enabled = enableInputs;
-            _minVoltageTextBox.Enabled = enableInputs;
-            _maxVoltageTextBox.Enabled = enableInputs;
-            _maxIterationsTextBox.Enabled = enableInputs;
+            _frequencyNumeric.Enabled = enableInputs;
+            _initialVoltageNumeric.Enabled = enableInputs;
+            _setpointNumeric.Enabled = enableInputs;
+            _toleranceNumeric.Enabled = enableInputs;
+            _voltageStepNumeric.Enabled = enableInputs;
+            _minVoltageNumeric.Enabled = enableInputs;
+            _maxVoltageNumeric.Enabled = enableInputs;
+            _maxIterationsNumeric.Enabled = enableInputs;
             _sensorComboBox.Enabled = enableInputs;
 
             // Start button enabled only when devices connected and not tuning
@@ -671,14 +620,14 @@ namespace CalibrationTuning.UserControls
         {
             return new TuningParameters
             {
-                FrequencyHz = double.Parse(_frequencyTextBox.Text),
-                InitialVoltage = double.Parse(_initialVoltageTextBox.Text),
-                TargetPowerDbm = double.Parse(_setpointTextBox.Text),
-                ToleranceDb = double.Parse(_toleranceTextBox.Text),
-                VoltageStepSize = double.Parse(_voltageStepTextBox.Text),
-                MinVoltage = double.Parse(_minVoltageTextBox.Text),
-                MaxVoltage = double.Parse(_maxVoltageTextBox.Text),
-                MaxIterations = int.Parse(_maxIterationsTextBox.Text),
+                FrequencyHz = (double)_frequencyNumeric.Value,
+                InitialVoltage = (double)_initialVoltageNumeric.Value,
+                TargetPowerDbm = (double)_setpointNumeric.Value,
+                ToleranceDb = (double)_toleranceNumeric.Value,
+                VoltageStepSize = (double)_voltageStepNumeric.Value,
+                MinVoltage = (double)_minVoltageNumeric.Value,
+                MaxVoltage = (double)_maxVoltageNumeric.Value,
+                MaxIterations = (int)_maxIterationsNumeric.Value,
                 SensorId = _sensorComboBox.SelectedIndex + 1
             };
         }
@@ -690,14 +639,14 @@ namespace CalibrationTuning.UserControls
         {
             if (parameters == null) return;
 
-            _frequencyTextBox.Text = parameters.FrequencyHz.ToString();
-            _initialVoltageTextBox.Text = parameters.InitialVoltage.ToString();
-            _setpointTextBox.Text = parameters.TargetPowerDbm.ToString();
-            _toleranceTextBox.Text = parameters.ToleranceDb.ToString();
-            _voltageStepTextBox.Text = parameters.VoltageStepSize.ToString();
-            _minVoltageTextBox.Text = parameters.MinVoltage.ToString();
-            _maxVoltageTextBox.Text = parameters.MaxVoltage.ToString();
-            _maxIterationsTextBox.Text = parameters.MaxIterations.ToString();
+            _frequencyNumeric.Value = (decimal)parameters.FrequencyHz;
+            _initialVoltageNumeric.Value = (decimal)parameters.InitialVoltage;
+            _setpointNumeric.Value = (decimal)parameters.TargetPowerDbm;
+            _toleranceNumeric.Value = (decimal)parameters.ToleranceDb;
+            _voltageStepNumeric.Value = (decimal)parameters.VoltageStepSize;
+            _minVoltageNumeric.Value = (decimal)parameters.MinVoltage;
+            _maxVoltageNumeric.Value = (decimal)parameters.MaxVoltage;
+            _maxIterationsNumeric.Value = parameters.MaxIterations;
             
             if (parameters.SensorId >= 1 && parameters.SensorId <= _sensorComboBox.Items.Count)
             {

@@ -123,12 +123,7 @@ namespace CalibrationTuning
                 if (arg.Equals("--simulate", StringComparison.OrdinalIgnoreCase) ||
                     arg.Equals("/simulate", StringComparison.OrdinalIgnoreCase))
                 {
-                    MessageBox.Show(
-                        "Running in SIMULATION MODE\n\n" +
-                        "Mock devices will be used instead of real hardware.",
-                        "Simulation Mode",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
+                    // Simulation mode enabled via command line
                     return true;
                 }
             }
@@ -138,13 +133,7 @@ namespace CalibrationTuning
             if (!string.IsNullOrEmpty(envVar) && 
                 (envVar.Equals("true", StringComparison.OrdinalIgnoreCase) || envVar == "1"))
             {
-                MessageBox.Show(
-                    "Running in SIMULATION MODE\n\n" +
-                    "Mock devices will be used instead of real hardware.\n" +
-                    "(Set via CALIBRATION_SIMULATE environment variable)",
-                    "Simulation Mode",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
+                // Simulation mode enabled via environment variable
                 return true;
             }
 

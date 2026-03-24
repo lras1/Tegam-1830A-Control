@@ -90,6 +90,34 @@ namespace CalibrationTuning
             // Load configuration from storage
             LoadConfiguration();
             
+            // Check if running in simulation mode and update title
+            string[] args = Environment.GetCommandLineArgs();
+            bool isSimulation = false;
+            foreach (string arg in args)
+            {
+                if (arg.Equals("--simulate", StringComparison.OrdinalIgnoreCase) ||
+                    arg.Equals("/simulate", StringComparison.OrdinalIgnoreCase))
+                {
+                    isSimulation = true;
+                    break;
+                }
+            }
+            
+            if (!isSimulation)
+            {
+                string envVar = Environment.GetEnvironmentVariable("CALIBRATION_SIMULATE");
+                if (!string.IsNullOrEmpty(envVar) && 
+                    (envVar.Equals("true", StringComparison.OrdinalIgnoreCase) || envVar == "1"))
+                {
+                    isSimulation = true;
+                }
+            }
+            
+            if (isSimulation)
+            {
+                this.Text += " [SIMULATION MODE]";
+            }
+            
             // TODO: Initialize remaining user controls in Tasks 6.3, 7.1, 8.1
         }
 
