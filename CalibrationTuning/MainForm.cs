@@ -46,21 +46,6 @@ namespace CalibrationTuning
             // This method is no longer needed - controls are created in Designer
         }
 
-        private MenuStrip _menuStrip;
-        private ToolStripMenuItem _fileMenu;
-        private ToolStripMenuItem _exitMenuItem;
-        private ToolStripMenuItem _helpMenu;
-        private ToolStripMenuItem _aboutMenuItem;
-
-        private TabControl _tabControl;
-        private TabPage _connectionTab;
-        private TabPage _tuningTab;
-        private TabPage _chartTab;
-
-        private StatusStrip _statusStrip;
-        private ToolStripStatusLabel _connectionStatusLabel;
-        private ToolStripStatusLabel _tuningStatusLabel;
-
         private void InitializeUserControls()
         {
             // Create and add ConnectionPanel to Connection tab
