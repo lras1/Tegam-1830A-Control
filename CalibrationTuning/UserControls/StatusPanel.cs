@@ -36,11 +36,12 @@ namespace CalibrationTuning.UserControls
             _tuningController = tuningController ?? throw new ArgumentNullException(nameof(tuningController));
 
             InitializeComponent();
+            InitializeControls();
             SubscribeToEvents();
             UpdateDisplay();
         }
 
-        private void InitializeComponent()
+        private void InitializeControls()
         {
             this.SuspendLayout();
 

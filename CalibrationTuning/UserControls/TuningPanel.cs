@@ -67,11 +67,12 @@ namespace CalibrationTuning.UserControls
             _mainForm = mainForm ?? throw new ArgumentNullException(nameof(mainForm));
 
             InitializeComponent();
+            InitializeControls();
             SubscribeToEvents();
             UpdateControlStates();
         }
 
-        private void InitializeComponent()
+        private void InitializeControls()
         {
             this.SuspendLayout();
 

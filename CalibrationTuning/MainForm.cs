@@ -29,18 +29,13 @@ namespace CalibrationTuning
             _configurationController = configurationController ?? throw new ArgumentNullException(nameof(configurationController));
 
             InitializeComponent();
+            InitializeControls();
             InitializeUserControls();
             InitializeEventHandlers();
         }
 
-        private void InitializeComponent()
+        private void InitializeControls()
         {
-            // Form properties
-            this.Text = "Calibration Tuning Application";
-            this.Size = new Size(1024, 768);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.MinimumSize = new Size(800, 600);
-
             // Create menu bar
             CreateMenuBar();
 

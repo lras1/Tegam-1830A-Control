@@ -80,14 +80,26 @@
     <Compile Include="UserControls\ConnectionPanel.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="UserControls\ConnectionPanel.Designer.cs">
+      <DependentUpon>ConnectionPanel.cs</DependentUpon>
+    </Compile>
     <Compile Include="UserControls\TuningPanel.cs">
       <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UserControls\TuningPanel.Designer.cs">
+      <DependentUpon>TuningPanel.cs</DependentUpon>
     </Compile>
     <Compile Include="UserControls\StatusPanel.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="UserControls\StatusPanel.Designer.cs">
+      <DependentUpon>StatusPanel.cs</DependentUpon>
+    </Compile>
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MainForm.Designer.cs">
+      <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
