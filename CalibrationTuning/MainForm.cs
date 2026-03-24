@@ -29,21 +29,21 @@ namespace CalibrationTuning
             _configurationController = configurationController ?? throw new ArgumentNullException(nameof(configurationController));
 
             InitializeComponent();
-            InitializeControls();
+            WireUpEventHandlers();
             InitializeUserControls();
             InitializeEventHandlers();
         }
 
+        private void WireUpEventHandlers()
+        {
+            // Wire up menu item event handlers
+            _exitMenuItem.Click += ExitMenuItem_Click;
+            _aboutMenuItem.Click += AboutMenuItem_Click;
+        }
+
         private void InitializeControls()
         {
-            // Create menu bar
-            CreateMenuBar();
-
-            // Create tab control
-            CreateTabControl();
-
-            // Create status bar
-            CreateStatusBar();
+            // This method is no longer needed - controls are created in Designer
         }
 
         private MenuStrip _menuStrip;
@@ -52,105 +52,14 @@ namespace CalibrationTuning
         private ToolStripMenuItem _helpMenu;
         private ToolStripMenuItem _aboutMenuItem;
 
-        private void CreateMenuBar()
-        {
-            _menuStrip = new MenuStrip
-            {
-                Dock = DockStyle.Top
-            };
-
-            // File menu
-            _fileMenu = new ToolStripMenuItem("&File");
-            
-            _exitMenuItem = new ToolStripMenuItem("E&xit");
-            _exitMenuItem.Click += ExitMenuItem_Click;
-            _exitMenuItem.ShortcutKeys = Keys.Alt | Keys.F4;
-            
-            _fileMenu.DropDownItems.Add(_exitMenuItem);
-
-            // Help menu
-            _helpMenu = new ToolStripMenuItem("&Help");
-            
-            _aboutMenuItem = new ToolStripMenuItem("&About");
-            _aboutMenuItem.Click += AboutMenuItem_Click;
-            
-            _helpMenu.DropDownItems.Add(_aboutMenuItem);
-
-            _menuStrip.Items.Add(_fileMenu);
-            _menuStrip.Items.Add(_helpMenu);
-
-            this.Controls.Add(_menuStrip);
-            this.MainMenuStrip = _menuStrip;
-        }
-
         private TabControl _tabControl;
         private TabPage _connectionTab;
         private TabPage _tuningTab;
         private TabPage _chartTab;
 
-        private void CreateTabControl()
-        {
-            _tabControl = new TabControl
-            {
-                Dock = DockStyle.Fill
-            };
-
-            // Connection tab
-            _connectionTab = new TabPage("Connection")
-            {
-                Padding = new Padding(10)
-            };
-            _tabControl.TabPages.Add(_connectionTab);
-
-            // Tuning tab
-            _tuningTab = new TabPage("Tuning")
-            {
-                Padding = new Padding(10)
-            };
-            _tabControl.TabPages.Add(_tuningTab);
-
-            // Chart tab
-            _chartTab = new TabPage("Chart")
-            {
-                Padding = new Padding(10)
-            };
-            _tabControl.TabPages.Add(_chartTab);
-
-            this.Controls.Add(_tabControl);
-        }
-
         private StatusStrip _statusStrip;
         private ToolStripStatusLabel _connectionStatusLabel;
         private ToolStripStatusLabel _tuningStatusLabel;
-
-        private void CreateStatusBar()
-        {
-            _statusStrip = new StatusStrip
-            {
-                Dock = DockStyle.Bottom
-            };
-
-            _connectionStatusLabel = new ToolStripStatusLabel
-            {
-                Text = "Devices: Disconnected",
-                BorderSides = ToolStripStatusLabelBorderSides.Right,
-                BorderStyle = Border3DStyle.Etched,
-                Spring = false,
-                AutoSize = true
-            };
-
-            _tuningStatusLabel = new ToolStripStatusLabel
-            {
-                Text = "Status: Idle",
-                Spring = true,
-                TextAlign = ContentAlignment.MiddleLeft
-            };
-
-            _statusStrip.Items.Add(_connectionStatusLabel);
-            _statusStrip.Items.Add(_tuningStatusLabel);
-
-            this.Controls.Add(_statusStrip);
-        }
 
         private void InitializeUserControls()
         {
