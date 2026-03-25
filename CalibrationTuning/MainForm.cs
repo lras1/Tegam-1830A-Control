@@ -18,6 +18,8 @@ namespace CalibrationTuning
         // User controls
         private ConnectionPanel _connectionPanel;
         private TuningPanel _tuningPanel;
+        private ChartPanel _chartPanel;
+        private LoggingPanel _loggingPanel;
 
         public MainForm(
             ITuningController tuningController,
@@ -62,23 +64,32 @@ namespace CalibrationTuning
             };
             _tuningTab.Controls.Add(_tuningPanel);
             
-            // Add placeholder label to Chart tab
-            var chartPlaceholder = new Label
+            // Create and add ChartPanel to Chart tab
+            _chartPanel = new ChartPanel(_tuningController)
             {
-                Text = "Chart visualization not yet implemented.\n\n" +
-                       "This tab will display real-time power vs voltage charts during tuning.",
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Font = new Font(this.Font.FontFamily, 10, FontStyle.Italic),
-                ForeColor = Color.Gray
+                Dock = DockStyle.Fill
             };
-            _chartTab.Controls.Add(chartPlaceholder);
+            _chartTab.Controls.Clear(); // Remove placeholder
+            _chartTab.Controls.Add(_chartPanel);
+            
+            // Create and add LoggingPanel to Logging tab
+            _loggingPanel = new LoggingPanel(_tuningController)
+            {
+                Dock = DockStyle.Fill
+            };
+            _loggingTab.Controls.Add(_loggingPanel);
         }
 
         private void InitializeEventHandlers()
         {
             // Subscribe to tuning controller events for status updates
             _tuningController.StateChanged += TuningController_StateChanged;
+            
+            // Subscribe data logging controller to user action events
+            _tuningController.UserActionOccurred += (sender, e) =>
+            {
+                _dataLoggingController.LogUserAction(e.ActionName, e.Parameters);
+            };
             
             // Form lifecycle events
             this.Load += MainForm_Load;
@@ -179,6 +190,7 @@ namespace CalibrationTuning
         public TabPage ConnectionTab => _connectionTab;
         public TabPage TuningTab => _tuningTab;
         public TabPage ChartTab => _chartTab;
+        public TabPage LoggingTab => _loggingTab;
 
         // Public property to access ConnectionPanel for configuration
         public ConnectionPanel ConnectionPanel => _connectionPanel;

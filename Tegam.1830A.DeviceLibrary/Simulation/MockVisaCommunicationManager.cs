@@ -42,6 +42,8 @@ namespace Tegam._1830A.DeviceLibrary.Simulation
         /// </summary>
         public bool Connect(string resourceName, int timeout = 5000)
         {
+            System.Diagnostics.Debug.WriteLine($"[MockVisa-Tegam] Connect called: resourceName='{resourceName}', timeout={timeout}ms");
+            
             if (string.IsNullOrWhiteSpace(resourceName))
                 throw new ArgumentException("Resource name cannot be null or empty.", nameof(resourceName));
 
@@ -56,6 +58,7 @@ namespace Tegam._1830A.DeviceLibrary.Simulation
                 // Check if we should simulate connection loss
                 if (_deviceState.ShouldSimulateConnectionLoss)
                 {
+                    System.Diagnostics.Debug.WriteLine("[MockVisa-Tegam] ✗ Simulating connection loss");
                     OnCommunicationError("Simulated connection loss.");
                     return false;
                 }
@@ -63,15 +66,18 @@ namespace Tegam._1830A.DeviceLibrary.Simulation
                 // Check if we should simulate timeout
                 if (_deviceState.ShouldSimulateTimeout)
                 {
+                    System.Diagnostics.Debug.WriteLine("[MockVisa-Tegam] ✗ Simulating timeout");
                     OnCommunicationError("Simulated timeout.");
                     return false;
                 }
 
                 _isConnected = true;
+                System.Diagnostics.Debug.WriteLine("[MockVisa-Tegam] ✓ Connection successful, IsConnected=true");
                 return true;
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[MockVisa-Tegam] ✗ Connection exception: {ex.Message}");
                 OnCommunicationError(string.Format("Connection failed: {0}", ex.Message), ex);
                 return false;
             }
@@ -204,15 +210,23 @@ namespace Tegam._1830A.DeviceLibrary.Simulation
         /// </summary>
         public string GetDeviceIdentity()
         {
+            System.Diagnostics.Debug.WriteLine($"[MockVisa-Tegam] GetDeviceIdentity called, IsConnected={_isConnected}");
+            
             if (!IsConnected)
+            {
+                System.Diagnostics.Debug.WriteLine("[MockVisa-Tegam] ✗ GetDeviceIdentity returning null - not connected");
                 return null;
+            }
 
             try
             {
-                return _deviceState.GenerateIdentityResponse();
+                string identity = _deviceState.GenerateIdentityResponse();
+                System.Diagnostics.Debug.WriteLine($"[MockVisa-Tegam] ✓ GetDeviceIdentity returning: {identity}");
+                return identity;
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[MockVisa-Tegam] ✗ GetDeviceIdentity exception: {ex.Message}");
                 OnCommunicationError(string.Format("Failed to get device identity: {0}", ex.Message), ex);
                 return null;
             }

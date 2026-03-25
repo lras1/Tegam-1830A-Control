@@ -38,6 +38,7 @@ namespace CalibrationTuning
             this._connectionTab = new System.Windows.Forms.TabPage();
             this._tuningTab = new System.Windows.Forms.TabPage();
             this._chartTab = new System.Windows.Forms.TabPage();
+            this._loggingTab = new System.Windows.Forms.TabPage();
             this._statusStrip = new System.Windows.Forms.StatusStrip();
             this._connectionStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this._tuningStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
@@ -91,6 +92,7 @@ namespace CalibrationTuning
             this._tabControl.Controls.Add(this._connectionTab);
             this._tabControl.Controls.Add(this._tuningTab);
             this._tabControl.Controls.Add(this._chartTab);
+            this._tabControl.Controls.Add(this._loggingTab);
             this._tabControl.Dock = System.Windows.Forms.DockStyle.Fill;
             this._tabControl.Location = new System.Drawing.Point(0, 24);
             this._tabControl.Name = "_tabControl";
@@ -127,6 +129,16 @@ namespace CalibrationTuning
             this._chartTab.TabIndex = 2;
             this._chartTab.Text = "Chart";
             this._chartTab.UseVisualStyleBackColor = true;
+            // 
+            // _loggingTab
+            // 
+            this._loggingTab.Location = new System.Drawing.Point(4, 22);
+            this._loggingTab.Name = "_loggingTab";
+            this._loggingTab.Padding = new System.Windows.Forms.Padding(10);
+            this._loggingTab.Size = new System.Drawing.Size(1016, 696);
+            this._loggingTab.TabIndex = 3;
+            this._loggingTab.Text = "Logging";
+            this._loggingTab.UseVisualStyleBackColor = true;
             // 
             // _statusStrip
             // 
@@ -189,6 +201,7 @@ namespace CalibrationTuning
         private System.Windows.Forms.TabPage _connectionTab;
         private System.Windows.Forms.TabPage _tuningTab;
         private System.Windows.Forms.TabPage _chartTab;
+        private System.Windows.Forms.TabPage _loggingTab;
         private System.Windows.Forms.StatusStrip _statusStrip;
         private System.Windows.Forms.ToolStripStatusLabel _connectionStatusLabel;
         private System.Windows.Forms.ToolStripStatusLabel _tuningStatusLabel;

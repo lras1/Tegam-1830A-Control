@@ -1,0 +1,108 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║                    CALIBRATION TUNING - QUICK FIX                            ║
+║                                                                              ║
+║  Problem: NotImplementedException when connecting devices                   ║
+║  Cause:   Simulation mode is NOT enabled                                    ║
+║  Fix:     Enable simulation mode (choose ONE method below)                  ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ METHOD 1: Visual Studio Debug Settings (EASIEST - RECOMMENDED)              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  1. In Visual Studio Solution Explorer:
+     Right-click "CalibrationTuning" project → Properties
+
+  2. Click "Debug" tab on the left
+
+  3. In "Command line arguments" field, type:
+     --simulate
+
+  4. Press Ctrl+S to save
+
+  5. Press F5 to run
+
+  ✓ Done! Connections should now work.
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ METHOD 2: Environment Variable (PERSISTENT)                                 │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  1. Press Win+X → System → Advanced system settings
+
+  2. Click "Environment Variables" button
+
+  3. Under "User variables", click "New"
+
+  4. Variable name:  CALIBRATION_SIMULATE
+     Variable value: true
+
+  5. Click OK on all dialogs
+
+  6. IMPORTANT: Close and restart Visual Studio
+
+  7. Rebuild solution (Build → Rebuild Solution)
+
+  8. Press F5 to run
+
+  ✓ Done! Connections should now work.
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ VERIFY IT WORKED                                                            │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  After running the application:
+
+  1. In Visual Studio: View → Output
+
+  2. Select "Debug" from dropdown
+
+  3. Look for this message:
+     [SimMode] ✓ Simulation mode ENABLED via ...
+
+  4. If you see this instead:
+     [SimMode] ✗ Simulation mode DISABLED
+     → Go back and try Method 1 or 2 again
+
+  5. Click "Connect" buttons in the app
+     → Should see "Status: Connected" in green immediately
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ WHY THIS IS NEEDED                                                          │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Without simulation mode:
+    ❌ Uses real VISA hardware communication
+    ❌ Throws NotImplementedException (no VISA drivers)
+    ❌ Connections fail
+
+  With simulation mode:
+    ✅ Uses mock/simulated communication
+    ✅ No hardware needed
+    ✅ Connections succeed instantly
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ STILL NOT WORKING?                                                          │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  1. Make sure you see [SimMode] messages in Debug Output
+     → If not, rebuild the solution (Build → Rebuild Solution)
+
+  2. If using environment variable, restart Visual Studio completely
+
+  3. Try Method 1 instead (easier and doesn't require restart)
+
+  4. Check ENABLE_SIMULATION_MODE.md for detailed troubleshooting
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+  TL;DR: Add "--simulate" to project debug settings and run again.
+
+═══════════════════════════════════════════════════════════════════════════════

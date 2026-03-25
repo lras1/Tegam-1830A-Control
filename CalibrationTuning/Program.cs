@@ -118,25 +118,30 @@ namespace CalibrationTuning
         {
             // Check command line arguments
             string[] args = Environment.GetCommandLineArgs();
+            System.Diagnostics.Debug.WriteLine($"[SimMode] Command line args: {string.Join(", ", args)}");
+            
             foreach (string arg in args)
             {
                 if (arg.Equals("--simulate", StringComparison.OrdinalIgnoreCase) ||
                     arg.Equals("/simulate", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Simulation mode enabled via command line
+                    System.Diagnostics.Debug.WriteLine("[SimMode] ✓ Simulation mode ENABLED via command line");
                     return true;
                 }
             }
 
             // Check environment variable
             string envVar = Environment.GetEnvironmentVariable("CALIBRATION_SIMULATE");
+            System.Diagnostics.Debug.WriteLine($"[SimMode] Environment variable CALIBRATION_SIMULATE={envVar ?? "(not set)"}");
+            
             if (!string.IsNullOrEmpty(envVar) && 
                 (envVar.Equals("true", StringComparison.OrdinalIgnoreCase) || envVar == "1"))
             {
-                // Simulation mode enabled via environment variable
+                System.Diagnostics.Debug.WriteLine("[SimMode] ✓ Simulation mode ENABLED via environment variable");
                 return true;
             }
 
+            System.Diagnostics.Debug.WriteLine("[SimMode] ✗ Simulation mode DISABLED - using real hardware");
             return false;
         }
     }

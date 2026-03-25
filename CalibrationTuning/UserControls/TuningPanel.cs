@@ -505,17 +505,30 @@ namespace CalibrationTuning.UserControls
                 // Disable button during measurement
                 _manualMeasureButton.Enabled = false;
 
-                // Perform manual measurement
-                var measurement = await _tuningController.MeasureManualAsync();
+                // Perform manual measurement with full details
+                var measurement = await _tuningController.MeasureManualWithDetailsAsync();
 
                 // Display result
-                MessageBox.Show(
-                    $"Manual Measurement:\n\n" +
-                    $"Power: {measurement.PowerDbm:F3} dBm\n" +
-                    $"Timestamp: {measurement.Timestamp:yyyy-MM-dd HH:mm:ss.fff}",
-                    "Manual Measurement Result",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
+                if (measurement.IsValid)
+                {
+                    MessageBox.Show(
+                        $"Manual Measurement:\n\n" +
+                        $"Frequency: {measurement.FrequencyHz:F0} Hz\n" +
+                        $"Voltage: {measurement.Voltage:F4} V\n" +
+                        $"Power: {measurement.PowerDbm:F3} dBm\n" +
+                        $"Timestamp: {measurement.Timestamp:yyyy-MM-dd HH:mm:ss.fff}",
+                        "Manual Measurement Result",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show(
+                        $"Manual Measurement Failed:\n\n{measurement.ErrorMessage}",
+                        "Manual Measurement Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
             }
             catch (Exception ex)
             {

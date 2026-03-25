@@ -1,0 +1,102 @@
+# Implementation Plan
+
+- [ ] 1. Write bug condition exploration test
+  - **Property 1: Bug Condition** - UI Controls Visibility and Error Message Display
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bugs exist
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the three bugs exist
+  - **Manual Testing Approach**: Since these are UI visibility bugs, manual testing is required
+  - Test Bug 1: Launch app, navigate to Tuning tab, verify DataGridView in StatusPanel is NOT visible (expected failure on unfixed code)
+  - Test Bug 2: Launch app, navigate to Chart tab, verify Chart control is NOT visible (expected failure on unfixed code)
+  - Test Bug 3: Launch app, click Start Tuning without connecting devices, verify NO MessageBox is displayed (expected failure on unfixed code)
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: All three tests FAIL (this is correct - it proves the bugs exist)
+  - Document counterexamples found:
+    - Bug 1: DataGridView exists in memory but not rendered on screen
+    - Bug 2: Chart exists in memory but not rendered on screen
+    - Bug 3: Error message handled internally but not displayed to user
+  - Mark task complete when tests are written, run, and failures are documented
+  - _Requirements: 1.1, 1.2, 1.3_
+
+- [ ] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Tuning Functionality Unchanged
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for normal tuning operations
+  - Test Case 1: Connect devices, start tuning with valid parameters, observe tuning executes normally
+  - Test Case 2: During tuning, observe DataGridView and Chart update with data points
+  - Test Case 3: Click Manual Measure, observe dialog displays frequency/voltage/power
+  - Test Case 4: Perform tuning session, observe CSV file contains correct setting and data rows
+  - Write property-based tests capturing observed behavior patterns from Preservation Requirements
+  - Property-based testing generates many test cases for stronger guarantees
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4_
+
+- [ ] 3. Fix for UI visibility and error message display issues
+
+  - [ ] 3.1 Fix DataGridView visibility in StatusPanel
+    - Open `Tegam.1830A/CalibrationTuning/UserControls/StatusPanel.cs`
+    - In `InitializeControls` method, verify DataGridView size and visibility
+    - Ensure DataGridView Size property allows proper rendering (current: 520x265)
+    - Verify parent GroupBox (_dataGridGroup) has sufficient height (current: 540x300)
+    - Add explicit `Visible = true` if needed
+    - Ensure DataGridView is properly anchored and added to Controls collection
+    - _Bug_Condition: controlType == "DataGridView" AND parent == "StatusPanel" AND NOT isVisible_
+    - _Expected_Behavior: DataGridView displays with columns (Type, Timestamp, Iteration, Frequency, Voltage, Power_dBm, Status)_
+    - _Preservation: Tuning functionality, data logging, and measurement behavior unchanged_
+    - _Requirements: 1.1, 2.1, 3.1, 3.2, 3.3, 3.4_
+
+  - [ ] 3.2 Fix Chart visibility in ChartPanel
+    - Open `Tegam.1830A/CalibrationTuning/UserControls/ChartPanel.cs`
+    - In `InitializeChart` method, verify Chart size and visibility
+    - Ensure Chart Size property allows proper rendering (current: 760x540)
+    - Add explicit `Visible = true` if needed
+    - Verify Chart is properly anchored and added to Controls collection (current code has `this.Controls.Add(_chart)`)
+    - Ensure ChartArea, Series, and Legend are properly configured
+    - _Bug_Condition: controlType == "Chart" AND parent == "ChartPanel" AND NOT isVisible_
+    - _Expected_Behavior: Chart displays with axes labeled "Iteration" (X) and "Power (dBm)" (Y), grid lines, and legend_
+    - _Preservation: Chart updates during tuning, data point additions, and target/tolerance line rendering unchanged_
+    - _Requirements: 1.2, 2.2, 3.1, 3.2, 3.3, 3.4_
+
+  - [ ] 3.3 Add error message display in TuningPanel
+    - Open `Tegam.1830A/CalibrationTuning/UserControls/TuningPanel.cs`
+    - In `HandleError` method, add MessageBox.Show call to display error to user
+    - Display error message with title "Tuning Error", OK button, and Error icon
+    - Ensure thread safety (already handled by InvokeRequired check in TuningController_ErrorOccurred)
+    - Keep existing `UpdateControlStates(isTuning: false)` call
+    - _Bug_Condition: eventType == "ErrorOccurred" AND NOT messageDisplayedToUser_
+    - _Expected_Behavior: MessageBox displays specific error message to user when errors occur_
+    - _Preservation: Error event handling, state transitions, and control state updates unchanged_
+    - _Requirements: 1.3, 2.3, 3.1, 3.2, 3.3, 3.4_
+
+  - [ ] 3.4 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - UI Controls Visible and Error Messages Displayed
+    - **IMPORTANT**: Re-run the SAME tests from task 1 - do NOT write new tests
+    - The tests from task 1 encode the expected behavior
+    - When these tests pass, it confirms the expected behavior is satisfied
+    - Test Bug 1 Fix: Launch app, navigate to Tuning tab, verify DataGridView IS visible with columns
+    - Test Bug 2 Fix: Launch app, navigate to Chart tab, verify Chart IS visible with axes and legend
+    - Test Bug 3 Fix: Launch app, click Start Tuning without devices, verify MessageBox IS displayed with error text
+    - Run bug condition exploration tests from step 1
+    - **EXPECTED OUTCOME**: All tests PASS (confirms bugs are fixed)
+    - _Requirements: 2.1, 2.2, 2.3_
+
+  - [ ] 3.5 Verify preservation tests still pass
+    - **Property 2: Preservation** - Tuning Functionality Unchanged
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Verify normal tuning operations work correctly
+    - Verify DataGridView and Chart update during tuning
+    - Verify Manual Measure dialog displays correctly
+    - Verify CSV logging continues to work
+    - Confirm all tests still pass after fix (no regressions)
+
+- [ ] 4. Checkpoint - Ensure all tests pass
+  - Verify all bug condition tests pass (DataGridView visible, Chart visible, error messages displayed)
+  - Verify all preservation tests pass (tuning functionality unchanged)
+  - Build and run application to confirm UI controls are visible
+  - Test error scenarios to confirm MessageBox displays
+  - Ask the user if questions arise

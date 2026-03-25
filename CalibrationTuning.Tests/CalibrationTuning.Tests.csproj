@@ -55,6 +55,8 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Unit\MainFormConfigurationTests.cs" />
+    <Compile Include="Unit\MainFormLoggingTabBugConditionTests.cs" />
+    <Compile Include="Unit\MainFormLoggingTabPreservationTests.cs" />
     <Compile Include="Unit\TuningControllerTests.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -62,11 +64,11 @@
       <Project>{E6F7A8B9-C0D1-4E2F-A3B4-C5D6E7F8A9B0}</Project>
       <Name>CalibrationTuning</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Tegam.1830A.DeviceLibrary\Tegam.1830A.DeviceLibrary.csproj">
+    <ProjectReference Include="..\..\Tegam.1830A\Tegam.1830A.DeviceLibrary\Tegam.1830A.DeviceLibrary.csproj">
       <Project>{A1B2C3D4-E5F6-47A8-B9C0-D1E2F3A4B5C6}</Project>
       <Name>Tegam.1830A.DeviceLibrary</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Siglent.SDG6052X.DeviceLibrary\Siglent.SDG6052X.DeviceLibrary.csproj">
+    <ProjectReference Include="..\..\Tegam.1830A\Siglent.SDG6052X.DeviceLibrary\Siglent.SDG6052X.DeviceLibrary.csproj">
       <Project>{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}</Project>
       <Name>Siglent.SDG6052X.DeviceLibrary</Name>
     </ProjectReference>

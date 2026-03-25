@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using CalibrationTuning.Models;
 
 namespace CalibrationTuning.Controllers
@@ -57,5 +58,12 @@ namespace CalibrationTuning.Controllers
         /// </summary>
         /// <param name="result">Final tuning result.</param>
         void LogSessionEnd(TuningResult result);
+
+        /// <summary>
+        /// Logs a user action (Connect, Disconnect, Start Tuning, Stop Tuning, Manual Measure).
+        /// </summary>
+        /// <param name="actionName">Name of the action.</param>
+        /// <param name="parameters">Optional parameters associated with the action.</param>
+        void LogUserAction(string actionName, Dictionary<string, string> parameters = null);
     }
 }

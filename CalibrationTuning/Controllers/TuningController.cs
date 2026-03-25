@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using CalibrationTuning.Events;
@@ -42,6 +43,11 @@ namespace CalibrationTuning.Controllers
         /// Raised when an error occurs during device operations or tuning.
         /// </summary>
         public event EventHandler<ErrorEventArgs> ErrorOccurred;
+
+        /// <summary>
+        /// Raised when a user action occurs (Connect, Disconnect, Start Tuning, Stop Tuning, Manual Measure).
+        /// </summary>
+        public event EventHandler<UserActionEventArgs> UserActionOccurred;
 
         /// <summary>
         /// Gets the current tuning state.
@@ -132,6 +138,7 @@ namespace CalibrationTuning.Controllers
 
                 // Both devices connected successfully
                 CurrentState = TuningState.Idle;
+                OnUserActionOccurred("Connect");
                 return true;
             }
             catch (Exception ex)
@@ -186,6 +193,7 @@ namespace CalibrationTuning.Controllers
                 }
 
                 CurrentState = TuningState.Idle;
+                OnUserActionOccurred("Disconnect");
             }
             catch (Exception ex)
             {
@@ -300,6 +308,14 @@ namespace CalibrationTuning.Controllers
                 return;
             }
 
+            // Validate SensorId
+            if (parameters.SensorId < 1 || parameters.SensorId > 2)
+            {
+                CurrentState = TuningState.Error;
+                OnErrorOccurred("Invalid SensorId. Must be 1 or 2.");
+                return;
+            }
+
             if (!_powerMeterService.IsConnected || !_signalGeneratorService.IsConnected)
             {
                 OnErrorOccurred("Both devices must be connected before starting tuning");
@@ -322,6 +338,7 @@ namespace CalibrationTuning.Controllers
             try
             {
                 CurrentState = TuningState.Tuning;
+                OnUserActionOccurred("Start Tuning");
 
                 // Configure signal generator frequency
                 var waveformParams = new Siglent.SDG6052X.DeviceLibrary.Models.WaveformParameters
@@ -639,6 +656,7 @@ namespace CalibrationTuning.Controllers
             // Transition to Aborted state
             // The tuning loop will detect this state change and terminate
             CurrentState = TuningState.Aborted;
+            OnUserActionOccurred("Stop Tuning");
         }
 
         /// <summary>
@@ -713,6 +731,126 @@ namespace CalibrationTuning.Controllers
         }
 
         /// <summary>
+        /// Gets the current frequency from the signal generator.
+        /// </summary>
+        /// <returns>Current frequency in Hz.</returns>
+        public async Task<double> GetCurrentFrequencyAsync()
+        {
+            if (!_signalGeneratorService.IsConnected)
+            {
+                throw new InvalidOperationException("Signal generator is not connected");
+            }
+
+            try
+            {
+                var waveformState = await _signalGeneratorService.GetWaveformStateAsync(1);
+                return waveformState.Frequency;
+            }
+            catch (Exception ex)
+            {
+                OnErrorOccurred("Failed to get current frequency: " + ex.Message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets the current voltage from the signal generator.
+        /// </summary>
+        /// <returns>Current voltage.</returns>
+        public async Task<double> GetCurrentVoltageAsync()
+        {
+            if (!_signalGeneratorService.IsConnected)
+            {
+                throw new InvalidOperationException("Signal generator is not connected");
+            }
+
+            try
+            {
+                var waveformState = await _signalGeneratorService.GetWaveformStateAsync(1);
+                return waveformState.Amplitude;
+            }
+            catch (Exception ex)
+            {
+                OnErrorOccurred("Failed to get current voltage: " + ex.Message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Performs a manual measurement with full details (frequency, voltage, and power).
+        /// </summary>
+        /// <returns>Manual measurement result with all values.</returns>
+        public async Task<ManualMeasurementResult> MeasureManualWithDetailsAsync()
+        {
+            var result = new ManualMeasurementResult
+            {
+                Timestamp = DateTime.Now
+            };
+
+            // Verify devices are connected
+            if (!_signalGeneratorService.IsConnected)
+            {
+                result.IsValid = false;
+                result.ErrorMessage = "Signal generator is not connected";
+                OnErrorOccurred(result.ErrorMessage);
+                return result;
+            }
+
+            if (!_powerMeterService.IsConnected)
+            {
+                result.IsValid = false;
+                result.ErrorMessage = "Power meter is not connected";
+                OnErrorOccurred(result.ErrorMessage);
+                return result;
+            }
+
+            // Verify not currently tuning
+            if (CurrentState == TuningState.Tuning || 
+                CurrentState == TuningState.Measuring || 
+                CurrentState == TuningState.Evaluating)
+            {
+                result.IsValid = false;
+                result.ErrorMessage = "Cannot perform manual measurement while tuning is active";
+                OnErrorOccurred(result.ErrorMessage);
+                return result;
+            }
+
+            try
+            {
+                // Get frequency from signal generator
+                result.FrequencyHz = await GetCurrentFrequencyAsync();
+
+                // Get voltage from signal generator
+                result.Voltage = await GetCurrentVoltageAsync();
+
+                // Measure power from power meter
+                var powerMeasurement = _powerMeterService.MeasurePower();
+                
+                if (powerMeasurement == null)
+                {
+                    result.IsValid = false;
+                    result.ErrorMessage = "Failed to measure power from power meter";
+                    OnErrorOccurred(result.ErrorMessage);
+                    return result;
+                }
+
+                result.PowerDbm = powerMeasurement.PowerValue;
+                result.IsValid = true;
+
+                OnUserActionOccurred("Manual Measure");
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                result.IsValid = false;
+                result.ErrorMessage = ex.Message;
+                OnErrorOccurred("Manual measurement error: " + ex.Message);
+                return result;
+            }
+        }
+
+        /// <summary>
         /// Raises the StateChanged event.
         /// </summary>
         private void OnStateChanged(TuningState previousState, TuningState newState)
@@ -742,6 +880,19 @@ namespace CalibrationTuning.Controllers
         private void OnErrorOccurred(string errorMessage)
         {
             ErrorOccurred?.Invoke(this, new ErrorEventArgs(new Exception(errorMessage)));
+        }
+
+        /// <summary>
+        /// Raises the UserActionOccurred event.
+        /// </summary>
+        private void OnUserActionOccurred(string actionName, Dictionary<string, string> parameters = null)
+        {
+            UserActionOccurred?.Invoke(this, new UserActionEventArgs
+            {
+                ActionName = actionName,
+                Timestamp = DateTime.Now,
+                Parameters = parameters ?? new Dictionary<string, string>()
+            });
         }
     }
 }

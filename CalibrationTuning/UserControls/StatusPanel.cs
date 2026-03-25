@@ -185,6 +185,13 @@ namespace CalibrationTuning.UserControls
             // Subscribe to TuningController events
             _tuningController.StateChanged += TuningController_StateChanged;
             _tuningController.ProgressUpdated += TuningController_ProgressUpdated;
+            _tuningController.TuningCompleted += TuningController_TuningCompleted;
+        }
+
+        private void TuningController_TuningCompleted(object sender, Events.TuningCompletedEventArgs e)
+        {
+            // Optionally add a completion row
+            // For now, we rely on the Stop Tuning action or final state
         }
 
         private void TuningController_StateChanged(object sender, TuningStateChangedEventArgs e)
@@ -321,6 +328,7 @@ namespace CalibrationTuning.UserControls
                 // Unsubscribe from events
                 _tuningController.StateChanged -= TuningController_StateChanged;
                 _tuningController.ProgressUpdated -= TuningController_ProgressUpdated;
+                _tuningController.TuningCompleted -= TuningController_TuningCompleted;
             }
             base.Dispose(disposing);
         }

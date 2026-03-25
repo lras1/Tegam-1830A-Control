@@ -1,0 +1,133 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration test
+  - **Property 1: Bug Condition** - DataGridView on Logging Tab
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the bug exists
+  - **Scoped PBT Approach**: For this structural UI bug, scope the property to concrete failing cases: MainForm tab structure and StatusPanel control hierarchy
+  - Test that MainForm has exactly 4 tabs (Connection, Tuning, Chart, Logging)
+  - Test that MainForm._tabControl contains a tab named "Logging"
+  - Test that StatusPanel does NOT contain a DataGridView control
+  - Test that MainForm has a LoggingPanel on the Logging tab
+  - The test assertions should match the Expected Behavior Properties from design
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found to understand root cause:
+    - MainForm only has 3 tabs instead of 4
+    - No Logging tab exists in the tab control
+    - StatusPanel contains a DataGridView control
+    - LoggingPanel class does not exist
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 2.1, 2.2, 2.3, 2.4_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Logging Functionality
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for non-buggy inputs (tuning operations, data logging)
+  - Manual testing approach is recommended for UI behavior preservation
+  - Test Start Tuning: Observe that clicking Start Tuning clears DataGridView and adds "Start Tuning" setting row
+  - Test Measurement Logging: Observe that tuning iterations add data rows with all columns (Type, Timestamp, Iteration, Frequency, Voltage, Power, Status)
+  - Test Stop Tuning: Observe that clicking Stop Tuning adds "Stop Tuning" setting row
+  - Test Auto-Scroll: Observe that DataGridView auto-scrolls to latest entry as new rows are added
+  - Test Status Display: Observe that StatusPanel displays tuning status and current measurements on Tuning tab
+  - Test Connection Tab: Observe that Connection tab functions for device connection
+  - Test Chart Tab: Observe that Chart tab displays tuning visualization
+  - Document observed behaviors that must be preserved
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8_
+
+- [-] 3. Fix for DataGridView placement on Logging tab
+
+  - [x] 3.1 Create LoggingPanel user control
+    - Create new file `CalibrationTuning/UserControls/LoggingPanel.cs`
+    - Create new file `CalibrationTuning/UserControls/LoggingPanel.Designer.cs`
+    - Define LoggingPanel class inheriting from UserControl
+    - Add ITuningController dependency in constructor
+    - Extract _dataGridView and _dataGridGroup fields from StatusPanel
+    - Extract DataGridView initialization code from StatusPanel (columns, properties, sizing)
+    - Extract AddSettingRow() method from StatusPanel
+    - Extract AddDataRow() method from StatusPanel
+    - Extract ClearDataGrid() method from StatusPanel
+    - Subscribe to TuningController.UserActionOccurred event (for setting rows and clearing grid)
+    - Subscribe to TuningController.ProgressUpdated event (for data rows)
+    - Implement Dispose() to unsubscribe from events
+    - _Bug_Condition: isBugCondition(input) where input.statusPanelContainsDataGridView AND NOT input.loggingTabExists_
+    - _Expected_Behavior: LoggingPanel hosts DataGridView on Logging tab, separate from StatusPanel_
+    - _Preservation: All logging methods (AddSettingRow, AddDataRow, ClearDataGrid) must work identically_
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5_
+
+  - [x] 3.2 Add Logging tab to MainForm
+    - Open `CalibrationTuning/MainForm.Designer.cs`
+    - Add private field `_loggingTab` of type TabPage
+    - In InitializeComponent(), create _loggingTab instance
+    - Set _loggingTab properties: Name = "_loggingTab", Text = "Logging", Padding = new Padding(10)
+    - Add _loggingTab to _tabControl.Controls collection (after _chartTab)
+    - Update _tabControl.Size and layout properties if needed
+    - _Bug_Condition: isBugCondition(input) where input.numberOfTabs == 3 AND NOT input.loggingTabExists_
+    - _Expected_Behavior: MainForm displays 4 tabs including Logging tab_
+    - _Preservation: Connection, Tuning, and Chart tabs continue to function_
+    - _Requirements: 2.2, 2.3_
+
+  - [x] 3.3 Integrate LoggingPanel into MainForm
+    - Open `CalibrationTuning/MainForm.cs`
+    - Add private field `_loggingPanel` of type LoggingPanel
+    - In InitializeUserControls(), instantiate LoggingPanel with _tuningController dependency
+    - Set _loggingPanel.Dock = DockStyle.Fill
+    - Add _loggingPanel to _loggingTab.Controls
+    - Add public property `LoggingTab` to expose _loggingTab
+    - _Bug_Condition: isBugCondition(input) where NOT input.loggingPanelExists_
+    - _Expected_Behavior: LoggingPanel is created and added to Logging tab_
+    - _Preservation: Existing user controls (ConnectionPanel, TuningPanel, ChartPanel) continue to work_
+    - _Requirements: 2.1, 2.2_
+
+  - [x] 3.4 Refactor StatusPanel to remove DataGridView
+    - Open `CalibrationTuning/UserControls/StatusPanel.cs`
+    - Remove _dataGridView and _dataGridGroup fields
+    - Remove DataGridView initialization code from InitializeControls()
+    - Remove AddSettingRow() method
+    - Remove AddDataRow() method
+    - Remove ClearDataGrid() method
+    - Remove TuningController.UserActionOccurred event subscription
+    - Remove TuningController.ProgressUpdated event handler code that adds data rows
+    - Update yPosition calculations to remove DataGridView section
+    - Adjust _measurementsGroup sizing and anchoring (remove Bottom anchor if present)
+    - Update Dispose() to remove DataGridView event unsubscriptions
+    - _Bug_Condition: isBugCondition(input) where input.statusPanelContainsDataGridView_
+    - _Expected_Behavior: StatusPanel only displays tuning status and current measurements_
+    - _Preservation: StatusPanel continues to display real-time status and measurements_
+    - _Requirements: 2.4, 3.6_
+
+  - [x] 3.5 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - DataGridView on Logging Tab
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1
+    - Verify MainForm has exactly 4 tabs
+    - Verify Logging tab exists in tab control
+    - Verify StatusPanel does NOT contain DataGridView
+    - Verify LoggingPanel exists on Logging tab with DataGridView
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - _Requirements: 2.1, 2.2, 2.3, 2.4_
+
+  - [-] 3.6 Verify preservation tests still pass
+    - **Property 2: Preservation** - Logging Functionality
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - Verify Start Tuning clears DataGridView and adds setting row
+    - Verify tuning iterations add data rows with all columns
+    - Verify Stop Tuning adds setting row
+    - Verify DataGridView auto-scrolls to latest entry
+    - Verify StatusPanel displays tuning status and measurements
+    - Verify Connection tab functions correctly
+    - Verify Chart tab functions correctly
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Confirm all tests still pass after fix (no regressions)
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8_
+
+- [ ] 4. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.

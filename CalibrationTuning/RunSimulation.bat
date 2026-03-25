@@ -1,16 +1,15 @@
 @echo off
-REM Run Calibration Tuning Application in Simulation Mode
-REM This allows testing without physical hardware
-
-echo.
 echo ========================================
-echo Calibration Tuning - SIMULATION MODE
+echo CalibrationTuning - Simulation Mode
 echo ========================================
 echo.
-echo Starting application with mock devices...
+echo Setting CALIBRATION_SIMULATE=true
+set CALIBRATION_SIMULATE=true
 echo.
-
-REM Run the application with simulation flag
-"%~dp0bin\Debug\CalibrationTuning.exe" --simulate
-
+echo Starting CalibrationTuning...
+echo.
+start "" "bin\Debug\CalibrationTuning.exe"
+echo.
+echo Application started in simulation mode.
+echo Close this window when done.
 pause

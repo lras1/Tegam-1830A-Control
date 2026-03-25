@@ -1,0 +1,291 @@
+using System;
+using System.Drawing;
+using System.Windows.Forms;
+using CalibrationTuning.Controllers;
+using CalibrationTuning.Events;
+using CalibrationTuning.Models;
+
+namespace CalibrationTuning.UserControls
+{
+    /// <summary>
+    /// User control for displaying measurement history logging data.
+    /// Extracted from StatusPanel to provide dedicated logging view on Logging tab.
+    /// </summary>
+    public partial class LoggingPanel : UserControl
+    {
+        private readonly ITuningController _tuningController;
+
+        // UI Controls - Data Grid
+        private GroupBox _dataGridGroup;
+        private DataGridView _dataGridView;
+
+        public LoggingPanel(ITuningController tuningController)
+        {
+            _tuningController = tuningController ?? throw new ArgumentNullException(nameof(tuningController));
+
+            InitializeComponent();
+            InitializeControls();
+            SubscribeToEvents();
+        }
+
+        private void InitializeControls()
+        {
+            this.SuspendLayout();
+
+            // Panel properties
+            this.AutoScroll = false;
+            this.Padding = new Padding(10);
+
+            // Data Grid Group
+            _dataGridGroup = new GroupBox
+            {
+                Text = "Measurement History",
+                Location = new Point(10, 10),
+                Size = new Size(540, 300),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom
+            };
+
+            _dataGridView = new DataGridView
+            {
+                Location = new Point(10, 25),
+                Size = new Size(520, 265),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                AllowUserToResizeRows = false,
+                ReadOnly = true,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                RowHeadersVisible = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
+                ScrollBars = ScrollBars.Both
+            };
+
+            // Configure columns
+            _dataGridView.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "Type",
+                HeaderText = "Type",
+                Width = 80,
+                ReadOnly = true
+            });
+
+            _dataGridView.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "Timestamp",
+                HeaderText = "Timestamp",
+                Width = 180,
+                ReadOnly = true
+            });
+
+            _dataGridView.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "Iteration",
+                HeaderText = "Iteration",
+                Width = 80,
+                ReadOnly = true
+            });
+
+            _dataGridView.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "Frequency",
+                HeaderText = "Frequency (Hz)",
+                Width = 120,
+                ReadOnly = true
+            });
+
+            _dataGridView.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "Voltage",
+                HeaderText = "Voltage (V)",
+                Width = 100,
+                ReadOnly = true
+            });
+
+            _dataGridView.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "Power_dBm",
+                HeaderText = "Power (dBm)",
+                Width = 100,
+                ReadOnly = true
+            });
+
+            _dataGridView.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "Status",
+                HeaderText = "Status",
+                Width = 120,
+                ReadOnly = true
+            });
+
+            _dataGridGroup.Controls.Add(_dataGridView);
+            this.Controls.Add(_dataGridGroup);
+
+            this.ResumeLayout(false);
+        }
+
+        private void SubscribeToEvents()
+        {
+            // Subscribe to TuningController events
+            _tuningController.UserActionOccurred += TuningController_UserActionOccurred;
+            _tuningController.ProgressUpdated += TuningController_ProgressUpdated;
+        }
+
+        private void TuningController_UserActionOccurred(object sender, Events.UserActionEventArgs e)
+        {
+            AddSettingRow(e.ActionName, e.Timestamp);
+            
+            // Clear data grid when starting a new tuning session
+            if (e.ActionName == "Start Tuning")
+            {
+                ClearDataGrid();
+            }
+        }
+
+        private void TuningController_ProgressUpdated(object sender, TuningProgressEventArgs e)
+        {
+            // Add data row to grid
+            if (e.Statistics != null && _tuningController.Parameters != null)
+            {
+                AddDataRow(
+                    e.Statistics.CurrentIteration,
+                    _tuningController.Parameters.FrequencyHz,
+                    e.Statistics.CurrentVoltage,
+                    e.Statistics.CurrentPowerDbm,
+                    "Tuning"
+                );
+            }
+        }
+
+        /// <summary>
+        /// Adds a setting row to the data grid view.
+        /// </summary>
+        /// <param name="actionName">Name of the user action.</param>
+        /// <param name="timestamp">Timestamp of the action.</param>
+        public void AddSettingRow(string actionName, DateTime timestamp)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => AddSettingRow(actionName, timestamp)));
+                return;
+            }
+
+            try
+            {
+                var row = new DataGridRow
+                {
+                    Type = "setting",
+                    Timestamp = timestamp,
+                    Iteration = null,
+                    Frequency = null,
+                    Voltage = null,
+                    PowerDbm = null,
+                    Status = actionName
+                };
+
+                _dataGridView.Rows.Add(
+                    row.Type,
+                    row.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                    "",
+                    "",
+                    "",
+                    "",
+                    row.Status
+                );
+
+                // Auto-scroll to latest entry
+                if (_dataGridView.Rows.Count > 0)
+                {
+                    _dataGridView.FirstDisplayedScrollingRowIndex = _dataGridView.Rows.Count - 1;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error adding setting row: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Adds a data row to the data grid view.
+        /// </summary>
+        /// <param name="iteration">Iteration number.</param>
+        /// <param name="frequency">Signal frequency in Hz.</param>
+        /// <param name="voltage">Signal voltage.</param>
+        /// <param name="powerDbm">Measured power in dBm.</param>
+        /// <param name="status">Status indicator.</param>
+        public void AddDataRow(int iteration, double frequency, double voltage, double powerDbm, string status)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => AddDataRow(iteration, frequency, voltage, powerDbm, status)));
+                return;
+            }
+
+            try
+            {
+                var row = new DataGridRow
+                {
+                    Type = "data",
+                    Timestamp = DateTime.Now,
+                    Iteration = iteration,
+                    Frequency = frequency,
+                    Voltage = voltage,
+                    PowerDbm = powerDbm,
+                    Status = status
+                };
+
+                _dataGridView.Rows.Add(
+                    row.Type,
+                    row.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                    row.Iteration.HasValue ? row.Iteration.Value.ToString() : "",
+                    row.Frequency.HasValue ? row.Frequency.Value.ToString("F0") : "",
+                    row.Voltage.HasValue ? row.Voltage.Value.ToString("F4") : "",
+                    row.PowerDbm.HasValue ? row.PowerDbm.Value.ToString("F3") : "",
+                    row.Status
+                );
+
+                // Auto-scroll to latest entry
+                if (_dataGridView.Rows.Count > 0)
+                {
+                    _dataGridView.FirstDisplayedScrollingRowIndex = _dataGridView.Rows.Count - 1;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error adding data row: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Clears all rows from the data grid view.
+        /// </summary>
+        public void ClearDataGrid()
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(ClearDataGrid));
+                return;
+            }
+
+            try
+            {
+                _dataGridView.Rows.Clear();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error clearing data grid: {ex.Message}");
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                // Unsubscribe from events
+                _tuningController.UserActionOccurred -= TuningController_UserActionOccurred;
+                _tuningController.ProgressUpdated -= TuningController_ProgressUpdated;
+            }
+            base.Dispose(disposing);
+        }
+    }
+}

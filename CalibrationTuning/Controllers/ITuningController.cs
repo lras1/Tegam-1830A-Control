@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using CalibrationTuning.Events;
@@ -31,6 +32,11 @@ namespace CalibrationTuning.Controllers
         /// Raised when an error occurs during device operations or tuning.
         /// </summary>
         event EventHandler<ErrorEventArgs> ErrorOccurred;
+
+        /// <summary>
+        /// Raised when a user action occurs (Connect, Disconnect, Start Tuning, Stop Tuning, Manual Measure).
+        /// </summary>
+        event EventHandler<UserActionEventArgs> UserActionOccurred;
 
         /// <summary>
         /// Gets the current tuning state.
@@ -100,5 +106,23 @@ namespace CalibrationTuning.Controllers
         /// Disconnects from the signal generator only.
         /// </summary>
         void DisconnectSignalGenerator();
+
+        /// <summary>
+        /// Gets the current frequency from the signal generator.
+        /// </summary>
+        /// <returns>Current frequency in Hz.</returns>
+        Task<double> GetCurrentFrequencyAsync();
+
+        /// <summary>
+        /// Gets the current voltage from the signal generator.
+        /// </summary>
+        /// <returns>Current voltage.</returns>
+        Task<double> GetCurrentVoltageAsync();
+
+        /// <summary>
+        /// Performs a manual measurement with full details (frequency, voltage, and power).
+        /// </summary>
+        /// <returns>Manual measurement result with all values.</returns>
+        Task<ManualMeasurementResult> MeasureManualWithDetailsAsync();
     }
 }

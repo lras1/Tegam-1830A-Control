@@ -1,0 +1,23 @@
+=== Bug Condition Exploration Test Runner ===
+
+Running SetUp...
+Running BugCondition test...
+
+
+TEST FAILED (EXPECTED - This confirms the bug exists)
+
+Exception Details:
+  COUNTEREXAMPLE: MainForm should have exactly 4 tabs (Connection, Tuning, Chart, Logging), but found 3 tabs
+  Expected: 4
+  But was:  3
+
+
+Stack Trace:
+   at NUnit.Framework.Assert.ReportFailure(String message)
+   at NUnit.Framework.Assert.ReportFailure(ConstraintResult result, String message, Object[] args)
+   at NUnit.Framework.Assert.That[TActual](TActual actual, IResolveConstraint expression, String message, Object[] args)
+   at NUnit.Framework.Assert.AreEqual(Object expected, Object actual, String message, Object[] args)
+   at CalibrationTuning.Tests.Unit.MainFormLoggingTabBugConditionTests.BugCondition_MainForm_ShouldHaveLoggingTabWithDataGridView_AndStatusPanelWithoutDataGridView() in C:\Users\lras1\source\repos\Tegam.1830A\CalibrationTuning.Tests\Unit\MainFormLoggingTabBugConditionTests.cs:line 93
+   at TestRunner.Program.Main(String[] args) in C:\Users\lras1\source\repos\Tegam.1830A\TestRunner\Program.cs:line 24
+
+Press any key to exit...

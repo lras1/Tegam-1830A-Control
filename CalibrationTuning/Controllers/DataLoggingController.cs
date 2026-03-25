@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -93,7 +94,7 @@ namespace CalibrationTuning.Controllers
                     // Write header if new file
                     if (!fileExists)
                     {
-                        _writer.WriteLine("Timestamp,Iteration,Frequency_Hz,Voltage,Power_dBm,Status");
+                        _writer.WriteLine("Type,Timestamp,Iteration,Frequency_Hz,Voltage,Power_dBm,Status");
                         _writer.Flush();
                     }
 
@@ -166,11 +167,11 @@ namespace CalibrationTuning.Controllers
 
                 try
                 {
-                    // Format: Timestamp,Iteration,Frequency_Hz,Voltage,Power_dBm,Status
+                    // Format: Type,Timestamp,Iteration,Frequency_Hz,Voltage,Power_dBm,Status
                     string timestamp = dataPoint.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
                     // Frequency is stored in session parameters, use 0 as placeholder for now
                     // The frequency will be consistent throughout a session
-                    string line = $"{timestamp},{dataPoint.Iteration},{_sessionFrequency:F0},{dataPoint.Voltage:F6},{dataPoint.PowerDbm:F3},{status ?? "Unknown"}";
+                    string line = $"data,{timestamp},{dataPoint.Iteration},{_sessionFrequency:F0},{dataPoint.Voltage:F6},{dataPoint.PowerDbm:F3},{status ?? "Unknown"}";
                     
                     _writer.WriteLine(line);
                     _writer.Flush();
@@ -266,6 +267,41 @@ namespace CalibrationTuning.Controllers
                 catch (Exception ex)
                 {
                     OnOperationError($"Failed to log session end: {ex.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Logs a user action (Connect, Disconnect, Start Tuning, Stop Tuning, Manual Measure).
+        /// </summary>
+        /// <param name="actionName">Name of the action.</param>
+        /// <param name="parameters">Optional parameters associated with the action.</param>
+        public void LogUserAction(string actionName, Dictionary<string, string> parameters = null)
+        {
+            if (string.IsNullOrWhiteSpace(actionName))
+            {
+                return;
+            }
+
+            lock (_lockObject)
+            {
+                if (!_isLogging || _writer == null)
+                {
+                    return;
+                }
+
+                try
+                {
+                    // Format: Type,Timestamp,Iteration,Frequency_Hz,Voltage,Power_dBm,Status
+                    string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
+                    string line = $"setting,{timestamp},,,,{actionName}";
+                    
+                    _writer.WriteLine(line);
+                    _writer.Flush();
+                }
+                catch (Exception ex)
+                {
+                    OnOperationError($"Failed to log user action: {ex.Message}");
                 }
             }
         }
