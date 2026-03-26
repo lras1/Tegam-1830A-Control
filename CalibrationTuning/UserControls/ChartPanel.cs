@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 using CalibrationTuning.Controllers;
@@ -9,61 +11,170 @@ using CalibrationTuning.Models;
 namespace CalibrationTuning.UserControls
 {
     /// <summary>
-    /// User control for displaying real-time power measurement chart during tuning.
+    /// User control for displaying real-time power measurement chart with
+    /// scroll/zoom, running average, and stability statistics.
     /// </summary>
     public partial class ChartPanel : UserControl
     {
         private readonly ITuningController _tuningController;
         private Chart _chart;
         private Series _measurementSeries;
+        private Series _runningAvgSeries;
         private Series _targetLineSeries;
         private Series _upperToleranceSeries;
         private Series _lowerToleranceSeries;
+
+        // Statistics panel
+        private GroupBox _statsGroup;
+        private Label _countValue;
+        private Label _avgValue;
+        private Label _stdDevValue;
+        private Label _minValue;
+        private Label _maxValue;
+        private Label _stabilityValue;
+        private NumericUpDown _windowSizeNumeric;
+
+        // Running statistics data
+        private readonly List<double> _powerValues = new List<double>();
+        private int _runningAvgWindow = 10;
+        private int _dataPointIndex = 0;
 
         public ChartPanel(ITuningController tuningController)
         {
             _tuningController = tuningController ?? throw new ArgumentNullException(nameof(tuningController));
 
             InitializeComponent();
-            InitializeChart();
+            InitializeUI();
             SubscribeToEvents();
+        }
+
+        private void InitializeUI()
+        {
+            this.SuspendLayout();
+
+            // Statistics panel at top
+            _statsGroup = new GroupBox
+            {
+                Text = "Power Statistics",
+                Dock = DockStyle.Top,
+                Height = 80,
+                Padding = new Padding(10, 5, 10, 5)
+            };
+
+            int x = 15, y = 20, colWidth = 130;
+
+            AddStatLabel(_statsGroup, "Samples:", ref x, y);
+            _countValue = AddStatValue(_statsGroup, "0", ref x, y, colWidth);
+
+            AddStatLabel(_statsGroup, "Avg:", ref x, y);
+            _avgValue = AddStatValue(_statsGroup, "-- dBm", ref x, y, colWidth);
+
+            AddStatLabel(_statsGroup, "StdDev:", ref x, y);
+            _stdDevValue = AddStatValue(_statsGroup, "-- dB", ref x, y, colWidth);
+
+            x = 15; y = 45;
+            AddStatLabel(_statsGroup, "Min:", ref x, y);
+            _minValue = AddStatValue(_statsGroup, "-- dBm", ref x, y, colWidth);
+
+            AddStatLabel(_statsGroup, "Max:", ref x, y);
+            _maxValue = AddStatValue(_statsGroup, "-- dBm", ref x, y, colWidth);
+
+            AddStatLabel(_statsGroup, "Stability:", ref x, y);
+            _stabilityValue = AddStatValue(_statsGroup, "--", ref x, y, colWidth);
+            _stabilityValue.Font = new Font(_stabilityValue.Font, FontStyle.Bold);
+
+            // Window size control
+            var windowLabel = new Label
+            {
+                Text = "Avg Window:",
+                Location = new Point(x + 10, y),
+                Size = new Size(70, 20),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            _statsGroup.Controls.Add(windowLabel);
+
+            _windowSizeNumeric = new NumericUpDown
+            {
+                Location = new Point(x + 82, y),
+                Size = new Size(55, 20),
+                Minimum = 2,
+                Maximum = 100,
+                Value = 10
+            };
+            _windowSizeNumeric.ValueChanged += (s, e) => { _runningAvgWindow = (int)_windowSizeNumeric.Value; RecalculateRunningAverage(); };
+            _statsGroup.Controls.Add(_windowSizeNumeric);
+
+            this.Controls.Add(_statsGroup);
+
+            // Chart fills remaining space
+            _chart = new Chart { Dock = DockStyle.Fill };
+            InitializeChart();
+            this.Controls.Add(_chart);
+
+            // Chart must be added before statsGroup so Dock.Fill works under Dock.Top
+            _chart.BringToFront();
+
+            this.ResumeLayout(false);
+        }
+
+        private Label AddStatLabel(Control parent, string text, ref int x, int y)
+        {
+            var lbl = new Label { Text = text, Location = new Point(x, y), Size = new Size(50, 20), TextAlign = ContentAlignment.MiddleRight };
+            parent.Controls.Add(lbl);
+            x += 52;
+            return lbl;
+        }
+
+        private Label AddStatValue(Control parent, string text, ref int x, int y, int colWidth)
+        {
+            var lbl = new Label { Text = text, Location = new Point(x, y), Size = new Size(75, 20), TextAlign = ContentAlignment.MiddleLeft, ForeColor = Color.DarkBlue };
+            parent.Controls.Add(lbl);
+            x += colWidth - 52;
+            return lbl;
         }
 
         private void InitializeChart()
         {
-            this.SuspendLayout();
-
-            // Create chart control
-            _chart = new Chart
-            {
-                Location = new Point(10, 10),
-                Size = new Size(760, 540),
-                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
-            };
-
-            // Create chart area
             var chartArea = new ChartArea("MainArea");
-            chartArea.AxisX.Title = "Iteration";
+            chartArea.AxisX.Title = "Sample #";
             chartArea.AxisX.MajorGrid.Enabled = true;
             chartArea.AxisX.MajorGrid.LineColor = Color.LightGray;
             chartArea.AxisY.Title = "Power (dBm)";
             chartArea.AxisY.MajorGrid.Enabled = true;
             chartArea.AxisY.MajorGrid.LineColor = Color.LightGray;
+
+            // Enable scroll and zoom
+            chartArea.CursorX.IsUserEnabled = true;
+            chartArea.CursorX.IsUserSelectionEnabled = true;
+            chartArea.CursorY.IsUserEnabled = true;
+            chartArea.CursorY.IsUserSelectionEnabled = true;
+            chartArea.AxisX.ScaleView.Zoomable = true;
+            chartArea.AxisY.ScaleView.Zoomable = true;
+            chartArea.AxisX.ScrollBar.IsPositionedInside = true;
+            chartArea.AxisY.ScrollBar.IsPositionedInside = true;
+
             _chart.ChartAreas.Add(chartArea);
 
-            // Create measurement series
             _measurementSeries = new Series("Measurements")
             {
                 ChartType = SeriesChartType.Line,
                 Color = Color.Blue,
                 BorderWidth = 2,
                 MarkerStyle = MarkerStyle.Circle,
-                MarkerSize = 6,
+                MarkerSize = 5,
                 MarkerColor = Color.Blue
             };
             _chart.Series.Add(_measurementSeries);
 
-            // Create target line series
+            _runningAvgSeries = new Series("Running Avg")
+            {
+                ChartType = SeriesChartType.Line,
+                Color = Color.DarkOrange,
+                BorderWidth = 2,
+                BorderDashStyle = ChartDashStyle.Solid
+            };
+            _chart.Series.Add(_runningAvgSeries);
+
             _targetLineSeries = new Series("Target")
             {
                 ChartType = SeriesChartType.Line,
@@ -73,8 +184,7 @@ namespace CalibrationTuning.UserControls
             };
             _chart.Series.Add(_targetLineSeries);
 
-            // Create upper tolerance series
-            _upperToleranceSeries = new Series("Upper Tolerance")
+            _upperToleranceSeries = new Series("Upper Tol")
             {
                 ChartType = SeriesChartType.Line,
                 Color = Color.Red,
@@ -83,8 +193,7 @@ namespace CalibrationTuning.UserControls
             };
             _chart.Series.Add(_upperToleranceSeries);
 
-            // Create lower tolerance series
-            _lowerToleranceSeries = new Series("Lower Tolerance")
+            _lowerToleranceSeries = new Series("Lower Tol")
             {
                 ChartType = SeriesChartType.Line,
                 Color = Color.Red,
@@ -93,16 +202,33 @@ namespace CalibrationTuning.UserControls
             };
             _chart.Series.Add(_lowerToleranceSeries);
 
-            // Configure legend
-            var legend = new Legend("MainLegend")
-            {
-                Docking = Docking.Top,
-                Alignment = StringAlignment.Far
-            };
+            var legend = new Legend("MainLegend") { Docking = Docking.Top, Alignment = StringAlignment.Far };
             _chart.Legends.Add(legend);
 
-            this.Controls.Add(_chart);
-            this.ResumeLayout(false);
+            // Mouse wheel zoom
+            _chart.MouseWheel += Chart_MouseWheel;
+        }
+
+        private void Chart_MouseWheel(object sender, MouseEventArgs e)
+        {
+            try
+            {
+                var area = _chart.ChartAreas[0];
+                if (e.Delta > 0)
+                {
+                    double xMin = area.AxisX.ScaleView.ViewMinimum;
+                    double xMax = area.AxisX.ScaleView.ViewMaximum;
+                    double xCenter = (xMin + xMax) / 2;
+                    double xRange = (xMax - xMin) / 2;
+                    area.AxisX.ScaleView.Zoom(xCenter - xRange * 0.5, xCenter + xRange * 0.5);
+                }
+                else
+                {
+                    area.AxisX.ScaleView.ZoomReset();
+                    area.AxisY.ScaleView.ZoomReset();
+                }
+            }
+            catch { }
         }
 
         private void SubscribeToEvents()
@@ -113,11 +239,8 @@ namespace CalibrationTuning.UserControls
 
         private void TuningController_StateChanged(object sender, TuningStateChangedEventArgs e)
         {
-            // Clear chart and set target/tolerance when starting a new tuning session
             if (e.NewState == TuningState.Tuning && e.PreviousState == TuningState.Idle)
             {
-                ClearChart();
-                
                 if (_tuningController.Parameters != null)
                 {
                     SetTargetAndTolerance(
@@ -136,11 +259,6 @@ namespace CalibrationTuning.UserControls
             }
         }
 
-        /// <summary>
-        /// Adds a data point to the measurement series.
-        /// </summary>
-        /// <param name="iteration">Iteration number.</param>
-        /// <param name="powerDbm">Measured power in dBm.</param>
         public void AddDataPoint(int iteration, double powerDbm)
         {
             if (this.InvokeRequired)
@@ -151,9 +269,22 @@ namespace CalibrationTuning.UserControls
 
             try
             {
-                _measurementSeries.Points.AddXY(iteration, powerDbm);
+                _dataPointIndex++;
+                _powerValues.Add(powerDbm);
+                _measurementSeries.Points.AddXY(_dataPointIndex, powerDbm);
 
-                // Auto-scale Y-axis to fit all data points
+                // Calculate and add running average point
+                if (_powerValues.Count >= _runningAvgWindow)
+                {
+                    double avg = _powerValues.Skip(_powerValues.Count - _runningAvgWindow).Take(_runningAvgWindow).Average();
+                    _runningAvgSeries.Points.AddXY(_dataPointIndex, avg);
+                }
+
+                // Extend target/tolerance lines to current X
+                ExtendHorizontalLines(_dataPointIndex);
+
+                UpdateStatistics();
+
                 if (_measurementSeries.Points.Count > 0)
                 {
                     _chart.ChartAreas[0].RecalculateAxesScale();
@@ -165,11 +296,102 @@ namespace CalibrationTuning.UserControls
             }
         }
 
-        /// <summary>
-        /// Sets the target power and tolerance lines on the chart.
-        /// </summary>
-        /// <param name="targetDbm">Target power in dBm.</param>
-        /// <param name="toleranceDb">Tolerance in dB.</param>
+        private void ExtendHorizontalLines(int maxX)
+        {
+            // Keep target/tolerance lines spanning the full X range
+            if (_targetLineSeries.Points.Count > 0)
+            {
+                double target = _targetLineSeries.Points[0].YValues[0];
+                _targetLineSeries.Points.Clear();
+                _targetLineSeries.Points.AddXY(0, target);
+                _targetLineSeries.Points.AddXY(maxX, target);
+            }
+            if (_upperToleranceSeries.Points.Count > 0)
+            {
+                double upper = _upperToleranceSeries.Points[0].YValues[0];
+                _upperToleranceSeries.Points.Clear();
+                _upperToleranceSeries.Points.AddXY(0, upper);
+                _upperToleranceSeries.Points.AddXY(maxX, upper);
+            }
+            if (_lowerToleranceSeries.Points.Count > 0)
+            {
+                double lower = _lowerToleranceSeries.Points[0].YValues[0];
+                _lowerToleranceSeries.Points.Clear();
+                _lowerToleranceSeries.Points.AddXY(0, lower);
+                _lowerToleranceSeries.Points.AddXY(maxX, lower);
+            }
+        }
+
+        private void UpdateStatistics()
+        {
+            if (_powerValues.Count == 0) return;
+
+            int n = _powerValues.Count;
+            double avg = _powerValues.Average();
+            double min = _powerValues.Min();
+            double max = _powerValues.Max();
+            double variance = _powerValues.Sum(v => (v - avg) * (v - avg)) / n;
+            double stdDev = Math.Sqrt(variance);
+
+            _countValue.Text = n.ToString();
+            _avgValue.Text = $"{avg:F3} dBm";
+            _stdDevValue.Text = $"{stdDev:F3} dB";
+            _minValue.Text = $"{min:F3} dBm";
+            _maxValue.Text = $"{max:F3} dBm";
+
+            // Stability: check if recent values (last window) are within tolerance
+            double tolerance = _tuningController.Parameters?.ToleranceDb ?? 1.0;
+            if (_powerValues.Count >= _runningAvgWindow)
+            {
+                var recent = _powerValues.Skip(_powerValues.Count - _runningAvgWindow).ToList();
+                double recentAvg = recent.Average();
+                double recentVariance = recent.Sum(v => (v - recentAvg) * (v - recentAvg)) / recent.Count;
+                double recentStdDev = Math.Sqrt(recentVariance);
+                double recentRange = recent.Max() - recent.Min();
+
+                if (recentStdDev <= tolerance / 2 && recentRange <= tolerance)
+                {
+                    _stabilityValue.Text = "STABLE";
+                    _stabilityValue.ForeColor = Color.Green;
+                }
+                else if (recentStdDev <= tolerance)
+                {
+                    _stabilityValue.Text = "SETTLING";
+                    _stabilityValue.ForeColor = Color.Orange;
+                }
+                else
+                {
+                    _stabilityValue.Text = "UNSTABLE";
+                    _stabilityValue.ForeColor = Color.Red;
+                }
+            }
+            else
+            {
+                _stabilityValue.Text = $"Need {_runningAvgWindow} pts";
+                _stabilityValue.ForeColor = Color.Gray;
+            }
+        }
+
+        private void RecalculateRunningAverage()
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(RecalculateRunningAverage));
+                return;
+            }
+
+            _runningAvgSeries.Points.Clear();
+            for (int i = _runningAvgWindow - 1; i < _powerValues.Count; i++)
+            {
+                double avg = 0;
+                for (int j = i - _runningAvgWindow + 1; j <= i; j++)
+                    avg += _powerValues[j];
+                avg /= _runningAvgWindow;
+                _runningAvgSeries.Points.AddXY(i + 1, avg);
+            }
+            UpdateStatistics();
+        }
+
         public void SetTargetAndTolerance(double targetDbm, double toleranceDb)
         {
             if (this.InvokeRequired)
@@ -180,15 +402,17 @@ namespace CalibrationTuning.UserControls
 
             try
             {
-                // Clear existing target and tolerance lines
                 _targetLineSeries.Points.Clear();
                 _upperToleranceSeries.Points.Clear();
                 _lowerToleranceSeries.Points.Clear();
 
-                // Add initial points (will be extended as measurements are added)
+                int maxX = Math.Max(_dataPointIndex, 1);
                 _targetLineSeries.Points.AddXY(0, targetDbm);
+                _targetLineSeries.Points.AddXY(maxX, targetDbm);
                 _upperToleranceSeries.Points.AddXY(0, targetDbm + toleranceDb);
+                _upperToleranceSeries.Points.AddXY(maxX, targetDbm + toleranceDb);
                 _lowerToleranceSeries.Points.AddXY(0, targetDbm - toleranceDb);
+                _lowerToleranceSeries.Points.AddXY(maxX, targetDbm - toleranceDb);
             }
             catch (Exception ex)
             {
@@ -196,9 +420,6 @@ namespace CalibrationTuning.UserControls
             }
         }
 
-        /// <summary>
-        /// Clears all data points from the chart.
-        /// </summary>
         public void ClearChart()
         {
             if (this.InvokeRequired)
@@ -210,9 +431,20 @@ namespace CalibrationTuning.UserControls
             try
             {
                 _measurementSeries.Points.Clear();
+                _runningAvgSeries.Points.Clear();
                 _targetLineSeries.Points.Clear();
                 _upperToleranceSeries.Points.Clear();
                 _lowerToleranceSeries.Points.Clear();
+                _powerValues.Clear();
+                _dataPointIndex = 0;
+                UpdateStatistics();
+                _countValue.Text = "0";
+                _avgValue.Text = "-- dBm";
+                _stdDevValue.Text = "-- dB";
+                _minValue.Text = "-- dBm";
+                _maxValue.Text = "-- dBm";
+                _stabilityValue.Text = "--";
+                _stabilityValue.ForeColor = Color.Gray;
             }
             catch (Exception ex)
             {
@@ -224,7 +456,6 @@ namespace CalibrationTuning.UserControls
         {
             if (disposing)
             {
-                // Unsubscribe from events
                 _tuningController.ProgressUpdated -= TuningController_ProgressUpdated;
                 _tuningController.StateChanged -= TuningController_StateChanged;
             }

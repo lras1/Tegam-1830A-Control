@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using CalibrationTuning.Controllers;
 using CalibrationTuning.Models;
@@ -48,6 +49,9 @@ namespace CalibrationTuning.UserControls
         private Label _maxVoltageUnitLabel;
         private Label _maxIterationsLabel;
         private NumericUpDown _maxIterationsNumeric;
+        private Label _sampleDelayLabel;
+        private NumericUpDown _sampleDelayNumeric;
+        private Label _sampleDelayUnitLabel;
 
         // UI Controls - Sensor Selection
         private GroupBox _sensorGroup;
@@ -104,9 +108,9 @@ namespace CalibrationTuning.UserControls
                 Location = new Point(120, 28),
                 Size = new Size(150, 20),
                 Minimum = 1,
-                Maximum = 500000000000,  // 500 GHz
+                Maximum = 500000000,  // 500 MHz (Siglent SDG6052X max for Sine)
                 DecimalPlaces = 0,
-                Value = 2400000000,      // 2.4 GHz
+                Value = 100000000,    // 100 MHz
                 ThousandsSeparator = true
             };
 
@@ -263,7 +267,7 @@ namespace CalibrationTuning.UserControls
             {
                 Text = "Safety Limits",
                 Location = new Point(10, yPosition),
-                Size = new Size(560, 120),
+                Size = new Size(560, 150),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
@@ -349,8 +353,39 @@ namespace CalibrationTuning.UserControls
             _safetyLimitsGroup.Controls.Add(_maxIterationsLabel);
             _safetyLimitsGroup.Controls.Add(_maxIterationsNumeric);
 
+            _sampleDelayLabel = new Label
+            {
+                Text = "Sample Delay:",
+                Location = new Point(15, 120),
+                Size = new Size(100, 20),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            _sampleDelayNumeric = new NumericUpDown
+            {
+                Location = new Point(120, 118),
+                Size = new Size(150, 20),
+                Minimum = 100,
+                Maximum = 10000,
+                DecimalPlaces = 0,
+                Value = 500,
+                Increment = 100
+            };
+
+            _sampleDelayUnitLabel = new Label
+            {
+                Text = "ms",
+                Location = new Point(275, 120),
+                Size = new Size(30, 20),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            _safetyLimitsGroup.Controls.Add(_sampleDelayLabel);
+            _safetyLimitsGroup.Controls.Add(_sampleDelayNumeric);
+            _safetyLimitsGroup.Controls.Add(_sampleDelayUnitLabel);
+
             this.Controls.Add(_safetyLimitsGroup);
-            yPosition += 130;
+            yPosition += 160;
 
             // Sensor Selection Group
             _sensorGroup = new GroupBox
@@ -453,7 +488,8 @@ namespace CalibrationTuning.UserControls
                     MinVoltage = (double)_minVoltageNumeric.Value,
                     MaxVoltage = (double)_maxVoltageNumeric.Value,
                     MaxIterations = (int)_maxIterationsNumeric.Value,
-                    SensorId = _sensorComboBox.SelectedIndex + 1
+                    SensorId = _sensorComboBox.SelectedIndex + 1,
+                    SampleDelayMs = (int)_sampleDelayNumeric.Value
                 };
 
                 // Validate ranges
@@ -474,8 +510,8 @@ namespace CalibrationTuning.UserControls
                 // Disable controls during tuning
                 UpdateControlStates(isTuning: true);
 
-                // Start tuning
-                await _tuningController.StartTuningAsync(parameters);
+                // Start tuning on background thread to keep UI responsive
+                await Task.Run(() => _tuningController.StartTuningAsync(parameters));
             }
             catch (Exception ex)
             {
@@ -511,6 +547,27 @@ namespace CalibrationTuning.UserControls
                 // Display result
                 if (measurement.IsValid)
                 {
+                    // Add data row to LoggingPanel
+                    if (_mainForm.LoggingPanel != null)
+                    {
+                        _mainForm.LoggingPanel.AddDataRow(
+                            0, // iteration 0 for manual measurement
+                            measurement.FrequencyHz,
+                            measurement.Voltage,
+                            measurement.PowerDbm,
+                            "Manual"
+                        );
+                    }
+
+                    // Add data point to Chart
+                    var chartPanel = _mainForm.ChartTab?.Controls.Count > 0 
+                        ? _mainForm.ChartTab.Controls[0] as ChartPanel 
+                        : null;
+                    if (chartPanel != null)
+                    {
+                        chartPanel.AddDataPoint(0, measurement.PowerDbm);
+                    }
+
                     MessageBox.Show(
                         $"Manual Measurement:\n\n" +
                         $"Frequency: {measurement.FrequencyHz:F0} Hz\n" +
@@ -605,6 +662,7 @@ namespace CalibrationTuning.UserControls
             _minVoltageNumeric.Enabled = enableInputs;
             _maxVoltageNumeric.Enabled = enableInputs;
             _maxIterationsNumeric.Enabled = enableInputs;
+            _sampleDelayNumeric.Enabled = enableInputs;
             _sensorComboBox.Enabled = enableInputs;
 
             // Start button enabled only when devices connected and not tuning
@@ -641,7 +699,8 @@ namespace CalibrationTuning.UserControls
                 MinVoltage = (double)_minVoltageNumeric.Value,
                 MaxVoltage = (double)_maxVoltageNumeric.Value,
                 MaxIterations = (int)_maxIterationsNumeric.Value,
-                SensorId = _sensorComboBox.SelectedIndex + 1
+                SensorId = _sensorComboBox.SelectedIndex + 1,
+                SampleDelayMs = (int)_sampleDelayNumeric.Value
             };
         }
 
@@ -660,6 +719,7 @@ namespace CalibrationTuning.UserControls
             _minVoltageNumeric.Value = (decimal)parameters.MinVoltage;
             _maxVoltageNumeric.Value = (decimal)parameters.MaxVoltage;
             _maxIterationsNumeric.Value = parameters.MaxIterations;
+            _sampleDelayNumeric.Value = parameters.SampleDelayMs > 0 ? parameters.SampleDelayMs : 500;
             
             if (parameters.SensorId >= 1 && parameters.SensorId <= _sensorComboBox.Items.Count)
             {

@@ -49,5 +49,11 @@ namespace CalibrationTuning.Models
         /// Power meter sensor ID to use for measurements.
         /// </summary>
         public int SensorId { get; set; }
+
+        /// <summary>
+        /// Delay between measurement samples in milliseconds.
+        /// Controls the sample rate during tuning. Default is 500ms.
+        /// </summary>
+        public int SampleDelayMs { get; set; } = 500;
     }
 }

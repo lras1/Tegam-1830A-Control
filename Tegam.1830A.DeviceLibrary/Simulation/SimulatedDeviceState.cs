@@ -205,7 +205,7 @@ namespace Tegam._1830A.DeviceLibrary.Simulation
         /// </summary>
         public string GenerateErrorResponse()
         {
-            return "100,Device error";
+            return "0,No error";
         }
 
         /// <summary>

@@ -198,6 +198,9 @@ namespace CalibrationTuning
         // Public property to access TuningPanel for configuration
         public TuningPanel TuningPanel => _tuningPanel;
 
+        // Public property to access LoggingPanel for data logging
+        public LoggingPanel LoggingPanel => _loggingPanel;
+
         /// <summary>
         /// Loads configuration from storage and populates UI controls.
         /// </summary>

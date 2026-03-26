@@ -660,8 +660,10 @@ namespace Tegam._1830A.DeviceLibrary.Services
                     string query = _commandBuilder.BuildSystemCommand("ERROR");
                     string response = _communicationManager.Query(query);
 
-                    // Check if response indicates no error (typically "0" or "0,")
-                    if (response.Trim() == "0" || response.Trim() == "0,")
+                    // Check if response indicates no error
+                    // Standard SCPI: "0,No error" or just "0" or "0,"
+                    string trimmedResponse = response.Trim();
+                    if (trimmedResponse == "0" || trimmedResponse == "0," || trimmedResponse.StartsWith("0,"))
                         break;
 
                     DeviceError error = _responseParser.ParseErrorResponse(response);

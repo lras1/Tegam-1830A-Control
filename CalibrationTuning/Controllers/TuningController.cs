@@ -221,6 +221,7 @@ namespace CalibrationTuning.Controllers
                         OnErrorOccurred("Failed to connect to power meter at " + powerMeterIp);
                         return false;
                     }
+                    OnUserActionOccurred("Connect Power Meter");
                     return true;
                 }
                 catch (Exception ex)
@@ -242,6 +243,7 @@ namespace CalibrationTuning.Controllers
                 if (_powerMeterService.IsConnected)
                 {
                     _powerMeterService.Disconnect();
+                    OnUserActionOccurred("Disconnect Power Meter");
                 }
             }
             catch (Exception ex)
@@ -268,6 +270,7 @@ namespace CalibrationTuning.Controllers
                     OnErrorOccurred("Failed to connect to signal generator at " + signalGenIp);
                     return false;
                 }
+                OnUserActionOccurred("Connect Signal Generator");
                 return true;
             }
             catch (Exception ex)
@@ -288,6 +291,7 @@ namespace CalibrationTuning.Controllers
                 if (_signalGeneratorService.IsConnected)
                 {
                     Task.Run(async () => await _signalGeneratorService.DisconnectAsync()).Wait();
+                    OnUserActionOccurred("Disconnect Signal Generator");
                 }
             }
             catch (Exception ex)
@@ -345,7 +349,8 @@ namespace CalibrationTuning.Controllers
                 {
                     Frequency = parameters.FrequencyHz,
                     Amplitude = parameters.InitialVoltage,
-                    Unit = Siglent.SDG6052X.DeviceLibrary.Models.AmplitudeUnit.Vpp
+                    Unit = Siglent.SDG6052X.DeviceLibrary.Models.AmplitudeUnit.Vpp,
+                    Load = Siglent.SDG6052X.DeviceLibrary.Models.LoadImpedance.HighZ
                 };
 
                 var setWaveformResult = await _signalGeneratorService.SetBasicWaveformAsync(
@@ -356,6 +361,7 @@ namespace CalibrationTuning.Controllers
                 if (!setWaveformResult.Success)
                 {
                     CurrentState = TuningState.Error;
+                    System.Diagnostics.Debug.WriteLine($"[TuningController] SetBasicWaveform FAILED: {setWaveformResult.Message}");
                     OnErrorOccurred("Failed to configure signal generator: " + setWaveformResult.Message);
                     return;
                 }
@@ -368,6 +374,7 @@ namespace CalibrationTuning.Controllers
                 if (!setFreqResult.IsSuccess)
                 {
                     CurrentState = TuningState.Error;
+                    System.Diagnostics.Debug.WriteLine($"[TuningController] SetFrequency FAILED: {setFreqResult.ErrorMessage}");
                     OnErrorOccurred("Failed to configure power meter frequency: " + setFreqResult.ErrorMessage);
                     return;
                 }
@@ -417,8 +424,8 @@ namespace CalibrationTuning.Controllers
                     _statistics.CurrentIteration = iteration;
                     CurrentState = TuningState.Measuring;
 
-                    // Small delay for signal settling
-                    await Task.Delay(100);
+                    // Small delay for signal settling (configurable sample rate)
+                    await Task.Delay(parameters.SampleDelayMs);
 
                     // Measure current power
                     var powerMeasurement = _powerMeterService.MeasurePower();
@@ -573,7 +580,8 @@ namespace CalibrationTuning.Controllers
                     {
                         Frequency = parameters.FrequencyHz,
                         Amplitude = newVoltage,
-                        Unit = Siglent.SDG6052X.DeviceLibrary.Models.AmplitudeUnit.Vpp
+                        Unit = Siglent.SDG6052X.DeviceLibrary.Models.AmplitudeUnit.Vpp,
+                        Load = Siglent.SDG6052X.DeviceLibrary.Models.LoadImpedance.HighZ
                     };
 
                     var updateResult = await _signalGeneratorService.SetBasicWaveformAsync(
@@ -863,6 +871,7 @@ namespace CalibrationTuning.Controllers
         /// </summary>
         private void OnProgressUpdated()
         {
+            System.Diagnostics.Debug.WriteLine($"[TuningController] OnProgressUpdated firing. Stats: Iter={_statistics?.CurrentIteration}, Power={_statistics?.CurrentPowerDbm}");
             ProgressUpdated?.Invoke(this, new TuningProgressEventArgs(_statistics));
         }
 

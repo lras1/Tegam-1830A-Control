@@ -186,19 +186,15 @@ namespace CalibrationTuning.UserControls
         private void TuningController_UserActionOccurred(object sender, Events.UserActionEventArgs e)
         {
             AddSettingRow(e.ActionName, e.Timestamp);
-            
-            // Clear data grid when starting a new tuning session
-            if (e.ActionName == "Start Tuning")
-            {
-                ClearDataGrid();
-            }
         }
 
         private void TuningController_ProgressUpdated(object sender, TuningProgressEventArgs e)
         {
+            System.Diagnostics.Debug.WriteLine($"[LoggingPanel] ProgressUpdated received. Stats null? {e.Statistics == null}, Params null? {_tuningController.Parameters == null}");
             // Add data row to grid
             if (e.Statistics != null && _tuningController.Parameters != null)
             {
+                System.Diagnostics.Debug.WriteLine($"[LoggingPanel] Adding data row: Iter={e.Statistics.CurrentIteration}, Power={e.Statistics.CurrentPowerDbm}");
                 AddDataRow(
                     e.Statistics.CurrentIteration,
                     _tuningController.Parameters.FrequencyHz,
