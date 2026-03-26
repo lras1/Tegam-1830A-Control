@@ -62,6 +62,7 @@ namespace CalibrationTuning.UserControls
         private Button _startTuningButton;
         private Button _stopTuningButton;
         private Button _manualMeasureButton;
+        private Button _resetIterButton;
 
         private bool _devicesConnected = false;
 
@@ -459,9 +460,19 @@ namespace CalibrationTuning.UserControls
             };
             _manualMeasureButton.Click += ManualMeasureButton_Click;
 
+            _resetIterButton = new Button
+            {
+                Text = "Reset Counter",
+                Location = new Point(400, yPosition),
+                Size = new Size(120, 35),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
+            };
+            _resetIterButton.Click += (s, ev) => _tuningController.ResetIterationCounter();
+
             this.Controls.Add(_startTuningButton);
             this.Controls.Add(_stopTuningButton);
             this.Controls.Add(_manualMeasureButton);
+            this.Controls.Add(_resetIterButton);
 
             yPosition += 45;
 

@@ -22,6 +22,7 @@ namespace CalibrationTuning.Controllers
         // State tracking
         private TuningState _currentState;
         private volatile bool _stopRequested;
+        private int _globalIteration;
         private TuningParameters _parameters;
         private TuningStatistics _statistics;
 
@@ -443,11 +444,12 @@ namespace CalibrationTuning.Controllers
                         return;
                     }
 
-                    _statistics.CurrentIteration = iteration;
+                    _globalIteration++;
+                    _statistics.CurrentIteration = _globalIteration;
                     CurrentState = TuningState.Measuring;
 
-                    if (iteration == 1)
-                        System.Diagnostics.Debug.WriteLine("[TuningController] First iteration starting...");
+                    if (_globalIteration == 1 || iteration == 1)
+                        System.Diagnostics.Debug.WriteLine($"[TuningController] Iteration {_globalIteration} starting...");
 
                     // Small delay for signal settling (configurable sample rate)
                     await Task.Delay(parameters.SampleDelayMs).ConfigureAwait(false);
@@ -455,7 +457,7 @@ namespace CalibrationTuning.Controllers
                     // Measure current power
                     var powerMeasurement = _powerMeterService.MeasurePower();
                     
-                    if (iteration == 1)
+                    if (_globalIteration == 1 || iteration == 1)
                         System.Diagnostics.Debug.WriteLine($"[TuningController] First measurement: Power={powerMeasurement?.PowerValue}");
                     
                     if (powerMeasurement == null)
@@ -526,109 +528,47 @@ namespace CalibrationTuning.Controllers
 
                     CurrentState = TuningState.Evaluating;
 
-                    // Check convergence criteria
-                    if (Math.Abs(_statistics.PowerError) <= parameters.ToleranceDb)
-                    {
-                        // Converged!
-                        CurrentState = TuningState.Converged;
-                        await _signalGeneratorService.SetOutputStateAsync(1, false);
-                        
-                        var result = new TuningResult
-                        {
-                            FinalState = TuningState.Converged,
-                            TotalIterations = iteration,
-                            FinalVoltage = _statistics.CurrentVoltage,
-                            FinalPowerDbm = _statistics.CurrentPowerDbm,
-                            PowerError = _statistics.PowerError,
-                            Duration = DateTime.Now - startTime
-                        };
-                        
-                        OnTuningCompleted(result);
-                        CurrentState = TuningState.Idle;
-                        return;
-                    }
-
                     // Calculate voltage adjustment using proportional control
                     double newVoltage;
                     if (_statistics.PowerError < -parameters.ToleranceDb)
                     {
-                        // Power too low, increase voltage
                         newVoltage = _statistics.CurrentVoltage + parameters.VoltageStepSize;
+                    }
+                    else if (_statistics.PowerError > parameters.ToleranceDb)
+                    {
+                        newVoltage = _statistics.CurrentVoltage - parameters.VoltageStepSize;
                     }
                     else
                     {
-                        // Power too high, decrease voltage
-                        newVoltage = _statistics.CurrentVoltage - parameters.VoltageStepSize;
+                        // Within tolerance, no adjustment needed
+                        newVoltage = _statistics.CurrentVoltage;
                     }
 
-                    // Check voltage safety limits
-                    if (newVoltage > parameters.MaxVoltage)
+                    // Clamp voltage to safety limits (don't terminate)
+                    newVoltage = Math.Max(parameters.MinVoltage, Math.Min(parameters.MaxVoltage, newVoltage));
+
+                    // Apply new voltage if changed
+                    if (Math.Abs(newVoltage - _statistics.CurrentVoltage) > 0.0001)
                     {
-                        CurrentState = TuningState.Error;
-                        await _signalGeneratorService.SetOutputStateAsync(1, false);
-                        
-                        var result = new TuningResult
-                        {
-                            FinalState = TuningState.Error,
-                            TotalIterations = iteration,
-                            FinalVoltage = _statistics.CurrentVoltage,
-                            FinalPowerDbm = _statistics.CurrentPowerDbm,
-                            PowerError = _statistics.PowerError,
-                            Duration = DateTime.Now - startTime,
-                            ErrorMessage = "Maximum voltage limit exceeded"
-                        };
-                        
-                        OnTuningCompleted(result);
-                        OnErrorOccurred("Maximum voltage limit exceeded");
-                        CurrentState = TuningState.Idle;
-                        return;
-                    }
-
-                    if (newVoltage < parameters.MinVoltage)
-                    {
-                        CurrentState = TuningState.Error;
-                        await _signalGeneratorService.SetOutputStateAsync(1, false);
-                        
-                        var result = new TuningResult
-                        {
-                            FinalState = TuningState.Error,
-                            TotalIterations = iteration,
-                            FinalVoltage = _statistics.CurrentVoltage,
-                            FinalPowerDbm = _statistics.CurrentPowerDbm,
-                            PowerError = _statistics.PowerError,
-                            Duration = DateTime.Now - startTime,
-                            ErrorMessage = "Minimum voltage limit exceeded"
-                        };
-                        
-                        OnTuningCompleted(result);
-                        OnErrorOccurred("Minimum voltage limit exceeded");
-                        CurrentState = TuningState.Idle;
-                        return;
-                    }
-
-                    // Apply new voltage
-                    _statistics.CurrentVoltage = newVoltage;
+                        _statistics.CurrentVoltage = newVoltage;
                     
-                    var updateWaveformParams = new Siglent.SDG6052X.DeviceLibrary.Models.WaveformParameters
-                    {
-                        Frequency = parameters.FrequencyHz,
-                        Amplitude = newVoltage,
-                        Unit = Siglent.SDG6052X.DeviceLibrary.Models.AmplitudeUnit.Vpp,
-                        Load = Siglent.SDG6052X.DeviceLibrary.Models.LoadImpedance.HighZ
-                    };
+                        var updateWaveformParams = new Siglent.SDG6052X.DeviceLibrary.Models.WaveformParameters
+                        {
+                            Frequency = parameters.FrequencyHz,
+                            Amplitude = newVoltage,
+                            Unit = Siglent.SDG6052X.DeviceLibrary.Models.AmplitudeUnit.Vpp,
+                            Load = Siglent.SDG6052X.DeviceLibrary.Models.LoadImpedance.HighZ
+                        };
 
-                    var updateResult = await _signalGeneratorService.SetBasicWaveformAsync(
-                        1, 
-                        Siglent.SDG6052X.DeviceLibrary.Models.WaveformType.Sine, 
-                        updateWaveformParams);
+                        var updateResult = await _signalGeneratorService.SetBasicWaveformAsync(
+                            1, 
+                            Siglent.SDG6052X.DeviceLibrary.Models.WaveformType.Sine, 
+                            updateWaveformParams);
 
-                    if (!updateResult.Success)
-                    {
-                        CurrentState = TuningState.Error;
-                        await _signalGeneratorService.SetOutputStateAsync(1, false);
-                        OnErrorOccurred("Failed to update signal generator voltage: " + updateResult.Message);
-                        CurrentState = TuningState.Idle;
-                        return;
+                        if (!updateResult.Success)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[TuningController] Warning: voltage update failed: {updateResult.Message}");
+                        }
                     }
 
                     CurrentState = TuningState.Tuning;
@@ -700,6 +640,15 @@ namespace CalibrationTuning.Controllers
             // Set volatile flag so background thread sees it immediately
             _stopRequested = true;
             OnUserActionOccurred("Stop Tuning");
+        }
+
+        /// <summary>
+        /// Resets the global iteration counter to zero.
+        /// </summary>
+        public void ResetIterationCounter()
+        {
+            _globalIteration = 0;
+            OnUserActionOccurred("Reset Iteration Counter");
         }
 
         /// <summary>

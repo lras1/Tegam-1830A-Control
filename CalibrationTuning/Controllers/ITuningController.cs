@@ -78,6 +78,11 @@ namespace CalibrationTuning.Controllers
         void StopTuning();
 
         /// <summary>
+        /// Resets the global iteration counter to zero.
+        /// </summary>
+        void ResetIterationCounter();
+
+        /// <summary>
         /// Performs a single manual power measurement.
         /// </summary>
         /// <returns>The measured power value.</returns>
