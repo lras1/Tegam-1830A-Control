@@ -1,0 +1,113 @@
+=== Running ALL CalibrationTuning.Tests ===
+
+Loading dependencies...
+  Loaded: System.Runtime.CompilerServices.Unsafe.dll
+  Loaded: System.Threading.Tasks.Extensions.dll
+  Loaded: Castle.Core.dll
+  Loaded: Moq.dll
+  Loaded: nunit.framework.dll
+  Loaded: Tegam.1830A.DeviceLibrary.dll
+  Loaded: Siglent.SDG6052X.DeviceLibrary.dll
+  Loaded: CalibrationTuning.exe
+  Loaded: CalibrationTuning.Tests.dll
+
+--- CalibrationTuning.Tests.Unit.MainFormLoggingTabBugConditionTests ---
+  BugCondition_MainForm_ShouldHaveLoggingTabWithDataGridView_AndStatusPanelWithoutDataGridView... PASSED
+
+--- CalibrationTuning.Tests.Unit.MainFormLoggingTabPreservationTests ---
+  Preservation_StartTuning_ClearsDataGridViewAndAddsSettingRow... PASSED
+  Preservation_TuningIterations_AddDataRowsWithAllColumns... PASSED
+  Preservation_StopTuning_AddsSettingRow... PASSED
+  Preservation_DataGridView_AutoScrollsToLatestEntry... PASSED
+  Preservation_StatusPanel_DisplaysTuningStatusAndMeasurements... PASSED
+  Preservation_ConnectionTab_FunctionsCorrectly... PASSED
+  Preservation_ChartTab_FunctionsCorrectly... PASSED
+
+--- CalibrationTuning.Tests.Unit.MainFormConfigurationTests ---
+  MainForm_Load_LoadsDeviceConfiguration... PASSED
+  MainForm_Load_LoadsTuningParameters... PASSED
+  MainForm_FormClosing_SavesDeviceConfiguration... FAILED
+    
+Expected invocation on the mock once, but was 2 times: c => c.SaveDeviceConfiguration(It.IsAny<DeviceConfiguration>())
+
+Performed invocations:
+
+   Mock<IConfigurationController:11> (c):
+
+      IConfigurationController.LoadDeviceConfiguration()
+      IConfigurationController.LoadLastParameters()
+      IConfigurationController.SaveDeviceConfiguration(DeviceConfiguration)
+      IConfigurationController.SaveParameters(TuningParameters)
+      IConfigurationController.SaveDeviceConfiguration(DeviceConfiguration)
+      IConfigurationController.SaveParameters(TuningParameters)
+
+  MainForm_FormClosing_SavesTuningParameters... FAILED
+    
+Expected invocation on the mock once, but was 2 times: c => c.SaveParameters(It.IsAny<TuningParameters>())
+
+Performed invocations:
+
+   Mock<IConfigurationController:12> (c):
+
+      IConfigurationController.LoadDeviceConfiguration()
+      IConfigurationController.LoadLastParameters()
+      IConfigurationController.SaveDeviceConfiguration(DeviceConfiguration)
+      IConfigurationController.SaveParameters(TuningParameters)
+      IConfigurationController.SaveDeviceConfiguration(DeviceConfiguration)
+      IConfigurationController.SaveParameters(TuningParameters)
+
+  MainForm_FormClosing_SavesLogFilePath_WhenAvailable... FAILED
+    
+Expected invocation on the mock once, but was 2 times: c => c.SaveLastLogPath("C:\Logs\test.csv")
+
+Performed invocations:
+
+   Mock<IConfigurationController:13> (c):
+
+      IConfigurationController.LoadDeviceConfiguration()
+      IConfigurationController.LoadLastParameters()
+      IConfigurationController.SaveDeviceConfiguration(DeviceConfiguration)
+      IConfigurationController.SaveParameters(TuningParameters)
+      IConfigurationController.SaveLastLogPath("C:\Logs\test.csv")
+      IConfigurationController.SaveDeviceConfiguration(DeviceConfiguration)
+      IConfigurationController.SaveParameters(TuningParameters)
+      IConfigurationController.SaveLastLogPath("C:\Logs\test.csv")
+
+  MainForm_FormClosing_DisconnectsDevices... FAILED
+    
+Expected invocation on the mock once, but was 2 times: c => c.DisconnectDevices()
+
+Performed invocations:
+
+   Mock<ITuningController:14> (c):
+
+      ITuningController.add_StateChanged(EventHandler<TuningStateChangedEventArgs>)
+      ITuningController.add_ErrorOccurred(EventHandler<ErrorEventArgs>)
+      ITuningController.add_StateChanged(EventHandler<TuningStateChangedEventArgs>)
+      ITuningController.add_ProgressUpdated(EventHandler<TuningProgressEventArgs>)
+      ITuningController.add_TuningCompleted(EventHandler<TuningCompletedEventArgs>)
+      ITuningController.CurrentState
+      ITuningController.Statistics
+      ITuningController.add_StateChanged(EventHandler<TuningStateChangedEventArgs>)
+      ITuningController.add_ErrorOccurred(EventHandler<ErrorEventArgs>)
+      ITuningController.add_ProgressUpdated(EventHandler<TuningProgressEventArgs>)
+      ITuningController.add_StateChanged(EventHandler<TuningStateChangedEventArgs>)
+      ITuningController.add_UserActionOccurred(EventHandler<UserActionEventArgs>)
+      ITuningController.add_ProgressUpdated(EventHandler<TuningProgressEventArgs>)
+      ITuningController.add_StateChanged(EventHandler<TuningStateChangedEventArgs>)
+      ITuningController.add_UserActionOccurred(EventHandler<UserActionEventArgs>)
+      ITuningController.DisconnectDevices()
+      ITuningController.DisconnectDevices()
+      ITuningController.remove_StateChanged(EventHandler<TuningStateChangedEventArgs>)
+      ITuningController.remove_ProgressUpdated(EventHandler<TuningProgressEventArgs>)
+      ITuningController.remove_TuningCompleted(EventHandler<TuningCompletedEventArgs>)
+      ITuningController.remove_ProgressUpdated(EventHandler<TuningProgressEventArgs>)
+      ITuningController.remove_StateChanged(EventHandler<TuningStateChangedEventArgs>)
+      ITuningController.remove_UserActionOccurred(EventHandler<UserActionEventArgs>)
+      ITuningController.remove_ProgressUpdated(EventHandler<TuningProgressEventArgs>)
+
+
+--- CalibrationTuning.Tests.Unit.TuningControllerTests ---
+  StopTuning_WhenNotTuning_RaisesErrorEvent... PASSED
+  StopTuning_WhenTuning_TransitionsToAbortedState... PASSED
+  MeasureManualAsync_WhenPowerMeterNotConnected_ReturnsInvalidMeasurement... 

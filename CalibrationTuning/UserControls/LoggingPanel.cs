@@ -19,6 +19,9 @@ namespace CalibrationTuning.UserControls
         private GroupBox _dataGridGroup;
         private DataGridView _dataGridView;
 
+        // Track pending scroll position for when control isn't visible
+        private int _pendingScrollRowIndex = -1;
+
         public LoggingPanel(ITuningController tuningController)
         {
             _tuningController = tuningController ?? throw new ArgumentNullException(nameof(tuningController));
@@ -40,16 +43,15 @@ namespace CalibrationTuning.UserControls
             _dataGridGroup = new GroupBox
             {
                 Text = "Measurement History",
-                Location = new Point(10, 10),
-                Size = new Size(540, 300),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom
+                Dock = DockStyle.Fill,
+                Padding = new Padding(10, 25, 10, 10)
             };
 
             _dataGridView = new DataGridView
             {
                 Location = new Point(10, 25),
-                Size = new Size(520, 265),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
+                Size = new Size(520, 50),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left,
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 AllowUserToResizeRows = false,
@@ -129,6 +131,56 @@ namespace CalibrationTuning.UserControls
             // Subscribe to TuningController events
             _tuningController.UserActionOccurred += TuningController_UserActionOccurred;
             _tuningController.ProgressUpdated += TuningController_ProgressUpdated;
+
+            // Subscribe to VisibleChanged to apply pending scroll when control becomes visible
+            _dataGridView.VisibleChanged += DataGridView_VisibleChanged;
+        }
+
+        private void DataGridView_VisibleChanged(object sender, EventArgs e)
+        {
+            if (_dataGridView.Visible)
+            {
+                // Resize DataGridView to fill the GroupBox when it becomes visible
+                if (_dataGridGroup != null)
+                {
+                    var padding = _dataGridGroup.Padding;
+                    _dataGridView.Size = new Size(
+                        _dataGridGroup.ClientSize.Width - padding.Left - padding.Right,
+                        _dataGridGroup.ClientSize.Height - _dataGridView.Location.Y - padding.Bottom);
+                    _dataGridView.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
+                }
+
+                // Apply pending scroll position
+                if (_pendingScrollRowIndex >= 0 && _dataGridView.Rows.Count > 0)
+                {
+                    try
+                    {
+                        _dataGridView.FirstDisplayedScrollingRowIndex = _pendingScrollRowIndex;
+                    }
+                    catch { }
+                    _pendingScrollRowIndex = -1;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Auto-scrolls the DataGridView to the last row, handling the case where the control isn't visible.
+        /// </summary>
+        private void AutoScrollToLastRow()
+        {
+            if (_dataGridView.Rows.Count > 0)
+            {
+                int targetIndex = _dataGridView.Rows.Count - 1;
+                _pendingScrollRowIndex = targetIndex;
+                try
+                {
+                    _dataGridView.FirstDisplayedScrollingRowIndex = targetIndex;
+                }
+                catch
+                {
+                    // Scroll will be applied when control becomes visible
+                }
+            }
         }
 
         private void TuningController_UserActionOccurred(object sender, Events.UserActionEventArgs e)
@@ -194,10 +246,7 @@ namespace CalibrationTuning.UserControls
                 );
 
                 // Auto-scroll to latest entry
-                if (_dataGridView.Rows.Count > 0)
-                {
-                    _dataGridView.FirstDisplayedScrollingRowIndex = _dataGridView.Rows.Count - 1;
-                }
+                AutoScrollToLastRow();
             }
             catch (Exception ex)
             {
@@ -245,10 +294,7 @@ namespace CalibrationTuning.UserControls
                 );
 
                 // Auto-scroll to latest entry
-                if (_dataGridView.Rows.Count > 0)
-                {
-                    _dataGridView.FirstDisplayedScrollingRowIndex = _dataGridView.Rows.Count - 1;
-                }
+                AutoScrollToLastRow();
             }
             catch (Exception ex)
             {
@@ -284,6 +330,10 @@ namespace CalibrationTuning.UserControls
                 // Unsubscribe from events
                 _tuningController.UserActionOccurred -= TuningController_UserActionOccurred;
                 _tuningController.ProgressUpdated -= TuningController_ProgressUpdated;
+                if (_dataGridView != null)
+                {
+                    _dataGridView.VisibleChanged -= DataGridView_VisibleChanged;
+                }
             }
             base.Dispose(disposing);
         }
