@@ -469,45 +469,6 @@ namespace CalibrationTuning.Controllers
                         return;
                     }
 
-                    // Check for power meter overload condition (Requirement 6.5)
-                    var errorQueue = _powerMeterService.GetErrorQueue();
-                    if (errorQueue != null && errorQueue.Count > 0)
-                    {
-                        // Check for overload or range errors
-                        foreach (var error in errorQueue)
-                        {
-                            // Common SCPI error codes for overload/range issues:
-                            // -222: Data out of range
-                            // -350: Queue overflow
-                            // Device-specific overload errors typically in range 100-999
-                            if (error.ErrorCode == -222 || 
-                                (error.ErrorCode >= 100 && error.ErrorCode <= 999 && 
-                                 (error.ErrorMessage.ToLower().Contains("overload") || 
-                                  error.ErrorMessage.ToLower().Contains("over range") ||
-                                  error.ErrorMessage.ToLower().Contains("limit"))))
-                            {
-                                CurrentState = TuningState.Error;
-                                await _signalGeneratorService.SetOutputStateAsync(1, false);
-                                
-                                var overloadResult = new TuningResult
-                                {
-                                    FinalState = TuningState.Error,
-                                    TotalIterations = iteration,
-                                    FinalVoltage = _statistics.CurrentVoltage,
-                                    FinalPowerDbm = _statistics.CurrentPowerDbm,
-                                    PowerError = _statistics.PowerError,
-                                    Duration = DateTime.Now - startTime,
-                                    ErrorMessage = "Power meter overload detected: " + error.ErrorMessage
-                                };
-                                
-                                OnTuningCompleted(overloadResult);
-                                OnErrorOccurred("Power meter overload detected: " + error.ErrorMessage);
-                                CurrentState = TuningState.Idle;
-                                return;
-                            }
-                        }
-                    }
-
                     // Update statistics
                     _statistics.CurrentPowerDbm = powerMeasurement.PowerValue;
                     _statistics.PowerError = powerMeasurement.PowerValue - parameters.TargetPowerDbm;
