@@ -245,7 +245,7 @@ namespace CalibrationTuning.UserControls
                 {
                     SetTargetAndTolerance(
                         _tuningController.Parameters.TargetPowerDbm,
-                        _tuningController.Parameters.ToleranceDb
+                        _tuningController.Parameters.MaxStdDevDb * _tuningController.Parameters.ConfidenceK
                     );
                 }
             }
@@ -339,35 +339,43 @@ namespace CalibrationTuning.UserControls
             _minValue.Text = $"{min:F3} dBm";
             _maxValue.Text = $"{max:F3} dBm";
 
-            // Stability: check if recent values (last window) are within tolerance
-            double tolerance = _tuningController.Parameters?.ToleranceDb ?? 1.0;
-            if (_powerValues.Count >= _runningAvgWindow)
+            // Stability: check using statistical criteria from parameters
+            double maxStdDev = _tuningController.Parameters?.MaxStdDevDb ?? 0.5;
+            double confidenceK = _tuningController.Parameters?.ConfidenceK ?? 2.0;
+            double target = _tuningController.Parameters?.TargetPowerDbm ?? 0;
+            int stabWindow = _tuningController.Parameters?.StabilityWindow ?? _runningAvgWindow;
+            
+            if (_powerValues.Count >= stabWindow)
             {
-                var recent = _powerValues.Skip(_powerValues.Count - _runningAvgWindow).ToList();
+                var recent = _powerValues.Skip(_powerValues.Count - stabWindow).ToList();
                 double recentAvg = recent.Average();
                 double recentVariance = recent.Sum(v => (v - recentAvg) * (v - recentAvg)) / recent.Count;
                 double recentStdDev = Math.Sqrt(recentVariance);
-                double recentRange = recent.Max() - recent.Min();
+                double meanError = Math.Abs(recentAvg - target);
 
-                if (recentStdDev <= tolerance / 2 && recentRange <= tolerance)
+                // Stable: stdDev within limit AND mean within k*stdDev of target
+                bool stdDevOk = recentStdDev <= maxStdDev;
+                bool meanOk = meanError <= confidenceK * recentStdDev;
+
+                if (stdDevOk && meanOk)
                 {
-                    _stabilityValue.Text = "STABLE";
+                    _stabilityValue.Text = $"STABLE (σ={recentStdDev:F2})";
                     _stabilityValue.ForeColor = Color.Green;
                 }
-                else if (recentStdDev <= tolerance)
+                else if (stdDevOk)
                 {
-                    _stabilityValue.Text = "SETTLING";
+                    _stabilityValue.Text = $"SETTLING (σ={recentStdDev:F2}, Δ={meanError:F2})";
                     _stabilityValue.ForeColor = Color.Orange;
                 }
                 else
                 {
-                    _stabilityValue.Text = "UNSTABLE";
+                    _stabilityValue.Text = $"UNSTABLE (σ={recentStdDev:F2})";
                     _stabilityValue.ForeColor = Color.Red;
                 }
             }
             else
             {
-                _stabilityValue.Text = $"Need {_runningAvgWindow} pts";
+                _stabilityValue.Text = $"Need {stabWindow} pts";
                 _stabilityValue.ForeColor = Color.Gray;
             }
         }

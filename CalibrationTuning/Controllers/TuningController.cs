@@ -529,12 +529,13 @@ namespace CalibrationTuning.Controllers
                     CurrentState = TuningState.Evaluating;
 
                     // Calculate voltage adjustment using proportional control
+                    // Use MaxStdDevDb as the dead-band for voltage adjustments
                     double newVoltage;
-                    if (_statistics.PowerError < -parameters.ToleranceDb)
+                    if (_statistics.PowerError < -parameters.MaxStdDevDb)
                     {
                         newVoltage = _statistics.CurrentVoltage + parameters.VoltageStepSize;
                     }
-                    else if (_statistics.PowerError > parameters.ToleranceDb)
+                    else if (_statistics.PowerError > parameters.MaxStdDevDb)
                     {
                         newVoltage = _statistics.CurrentVoltage - parameters.VoltageStepSize;
                     }

@@ -73,7 +73,7 @@ namespace CalibrationTuning.Tests.Unit
                 FrequencyHz = 5000000000,
                 InitialVoltage = 1.0,
                 TargetPowerDbm = -5.0,
-                ToleranceDb = 0.3,
+                MaxStdDevDb = 0.3,
                 VoltageStepSize = 0.1,
                 MinVoltage = 0.05,
                 MaxVoltage = 10.0,

@@ -186,7 +186,9 @@ namespace CalibrationTuning.Controllers
                 FrequencyHz = 2400000000, // 2.4 GHz
                 InitialVoltage = 0.5,
                 TargetPowerDbm = -10.0,
-                ToleranceDb = 0.5,
+                MaxStdDevDb = 0.5,
+                ConfidenceK = 2.0,
+                StabilityWindow = 10,
                 VoltageStepSize = 0.05,
                 MinVoltage = 0.01,
                 MaxVoltage = 5.0,

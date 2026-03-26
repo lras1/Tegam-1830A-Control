@@ -212,7 +212,9 @@ namespace CalibrationTuning.Controllers
                     _writer.WriteLine($"# Session Start: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
                     _writer.WriteLine($"# Frequency: {parameters.FrequencyHz} Hz");
                     _writer.WriteLine($"# Target Power: {parameters.TargetPowerDbm} dBm");
-                    _writer.WriteLine($"# Tolerance: {parameters.ToleranceDb} dB");
+                    _writer.WriteLine($"# Max StdDev: {parameters.MaxStdDevDb} dB");
+                    _writer.WriteLine($"# Confidence K: {parameters.ConfidenceK}");
+                    _writer.WriteLine($"# Stability Window: {parameters.StabilityWindow}");
                     _writer.WriteLine($"# Initial Voltage: {parameters.InitialVoltage} V");
                     _writer.WriteLine($"# Voltage Step: {parameters.VoltageStepSize} V");
                     _writer.WriteLine($"# Voltage Range: {parameters.MinVoltage} V to {parameters.MaxVoltage} V");

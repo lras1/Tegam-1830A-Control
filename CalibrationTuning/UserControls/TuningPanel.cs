@@ -32,9 +32,13 @@ namespace CalibrationTuning.UserControls
         private Label _setpointLabel;
         private NumericUpDown _setpointNumeric;
         private Label _setpointUnitLabel;
-        private Label _toleranceLabel;
-        private NumericUpDown _toleranceNumeric;
-        private Label _toleranceUnitLabel;
+        private Label _maxStdDevLabel;
+        private NumericUpDown _maxStdDevNumeric;
+        private Label _maxStdDevUnitLabel;
+        private Label _confidenceKLabel;
+        private NumericUpDown _confidenceKNumeric;
+        private Label _stabilityWindowLabel;
+        private NumericUpDown _stabilityWindowNumeric;
         private Label _voltageStepLabel;
         private NumericUpDown _voltageStepNumeric;
         private Label _voltageStepUnitLabel;
@@ -165,7 +169,7 @@ namespace CalibrationTuning.UserControls
             {
                 Text = "Tuning Parameters",
                 Location = new Point(10, yPosition),
-                Size = new Size(560, 120),
+                Size = new Size(560, 150),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
@@ -196,26 +200,26 @@ namespace CalibrationTuning.UserControls
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
-            _toleranceLabel = new Label
+            _maxStdDevLabel = new Label
             {
-                Text = "Tolerance:",
+                Text = "Max StdDev:",
                 Location = new Point(15, 60),
                 Size = new Size(100, 20),
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
-            _toleranceNumeric = new NumericUpDown
+            _maxStdDevNumeric = new NumericUpDown
             {
                 Location = new Point(120, 58),
                 Size = new Size(150, 20),
                 Minimum = 0.01M,
-                Maximum = 10M,
+                Maximum = 20M,
                 DecimalPlaces = 2,
                 Value = 0.5M,
                 Increment = 0.1M
             };
 
-            _toleranceUnitLabel = new Label
+            _maxStdDevUnitLabel = new Label
             {
                 Text = "dB",
                 Location = new Point(275, 60),
@@ -223,17 +227,55 @@ namespace CalibrationTuning.UserControls
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
+            _confidenceKLabel = new Label
+            {
+                Text = "Confidence (k):",
+                Location = new Point(15, 90),
+                Size = new Size(100, 20),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            _confidenceKNumeric = new NumericUpDown
+            {
+                Location = new Point(120, 88),
+                Size = new Size(150, 20),
+                Minimum = 1M,
+                Maximum = 5M,
+                DecimalPlaces = 1,
+                Value = 2.0M,
+                Increment = 0.5M
+            };
+
+            _stabilityWindowLabel = new Label
+            {
+                Text = "Stability Win:",
+                Location = new Point(310, 90),
+                Size = new Size(80, 20),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            _stabilityWindowNumeric = new NumericUpDown
+            {
+                Location = new Point(395, 88),
+                Size = new Size(60, 20),
+                Minimum = 3,
+                Maximum = 200,
+                DecimalPlaces = 0,
+                Value = 10,
+                Increment = 5
+            };
+
             _voltageStepLabel = new Label
             {
                 Text = "Voltage Step:",
-                Location = new Point(15, 90),
+                Location = new Point(15, 120),
                 Size = new Size(100, 20),
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
             _voltageStepNumeric = new NumericUpDown
             {
-                Location = new Point(120, 88),
+                Location = new Point(120, 118),
                 Size = new Size(150, 20),
                 Minimum = 0.001M,
                 Maximum = 1M,
@@ -245,7 +287,7 @@ namespace CalibrationTuning.UserControls
             _voltageStepUnitLabel = new Label
             {
                 Text = "V",
-                Location = new Point(275, 90),
+                Location = new Point(275, 120),
                 Size = new Size(30, 20),
                 TextAlign = ContentAlignment.MiddleLeft
             };
@@ -253,15 +295,19 @@ namespace CalibrationTuning.UserControls
             _tuningParamsGroup.Controls.Add(_setpointLabel);
             _tuningParamsGroup.Controls.Add(_setpointNumeric);
             _tuningParamsGroup.Controls.Add(_setpointUnitLabel);
-            _tuningParamsGroup.Controls.Add(_toleranceLabel);
-            _tuningParamsGroup.Controls.Add(_toleranceNumeric);
-            _tuningParamsGroup.Controls.Add(_toleranceUnitLabel);
+            _tuningParamsGroup.Controls.Add(_maxStdDevLabel);
+            _tuningParamsGroup.Controls.Add(_maxStdDevNumeric);
+            _tuningParamsGroup.Controls.Add(_maxStdDevUnitLabel);
+            _tuningParamsGroup.Controls.Add(_confidenceKLabel);
+            _tuningParamsGroup.Controls.Add(_confidenceKNumeric);
+            _tuningParamsGroup.Controls.Add(_stabilityWindowLabel);
+            _tuningParamsGroup.Controls.Add(_stabilityWindowNumeric);
             _tuningParamsGroup.Controls.Add(_voltageStepLabel);
             _tuningParamsGroup.Controls.Add(_voltageStepNumeric);
             _tuningParamsGroup.Controls.Add(_voltageStepUnitLabel);
 
             this.Controls.Add(_tuningParamsGroup);
-            yPosition += 130;
+            yPosition += 160;
 
             // Safety Limits Group
             _safetyLimitsGroup = new GroupBox
@@ -505,7 +551,9 @@ namespace CalibrationTuning.UserControls
                     FrequencyHz = (double)_frequencyNumeric.Value,
                     InitialVoltage = (double)_initialVoltageNumeric.Value,
                     TargetPowerDbm = (double)_setpointNumeric.Value,
-                    ToleranceDb = (double)_toleranceNumeric.Value,
+                    MaxStdDevDb = (double)_maxStdDevNumeric.Value,
+                    ConfidenceK = (double)_confidenceKNumeric.Value,
+                    StabilityWindow = (int)_stabilityWindowNumeric.Value,
                     VoltageStepSize = (double)_voltageStepNumeric.Value,
                     MinVoltage = (double)_minVoltageNumeric.Value,
                     MaxVoltage = (double)_maxVoltageNumeric.Value,
@@ -683,7 +731,9 @@ namespace CalibrationTuning.UserControls
             _frequencyNumeric.Enabled = enableInputs;
             _initialVoltageNumeric.Enabled = enableInputs;
             _setpointNumeric.Enabled = enableInputs;
-            _toleranceNumeric.Enabled = enableInputs;
+            _maxStdDevNumeric.Enabled = enableInputs;
+            _confidenceKNumeric.Enabled = enableInputs;
+            _stabilityWindowNumeric.Enabled = enableInputs;
             _voltageStepNumeric.Enabled = enableInputs;
             _minVoltageNumeric.Enabled = enableInputs;
             _maxVoltageNumeric.Enabled = enableInputs;
@@ -720,7 +770,9 @@ namespace CalibrationTuning.UserControls
                 FrequencyHz = (double)_frequencyNumeric.Value,
                 InitialVoltage = (double)_initialVoltageNumeric.Value,
                 TargetPowerDbm = (double)_setpointNumeric.Value,
-                ToleranceDb = (double)_toleranceNumeric.Value,
+                MaxStdDevDb = (double)_maxStdDevNumeric.Value,
+                ConfidenceK = (double)_confidenceKNumeric.Value,
+                StabilityWindow = (int)_stabilityWindowNumeric.Value,
                 VoltageStepSize = (double)_voltageStepNumeric.Value,
                 MinVoltage = (double)_minVoltageNumeric.Value,
                 MaxVoltage = (double)_maxVoltageNumeric.Value,
@@ -740,7 +792,9 @@ namespace CalibrationTuning.UserControls
             _frequencyNumeric.Value = (decimal)parameters.FrequencyHz;
             _initialVoltageNumeric.Value = (decimal)parameters.InitialVoltage;
             _setpointNumeric.Value = (decimal)parameters.TargetPowerDbm;
-            _toleranceNumeric.Value = (decimal)parameters.ToleranceDb;
+            _maxStdDevNumeric.Value = (decimal)parameters.MaxStdDevDb;
+            _confidenceKNumeric.Value = (decimal)parameters.ConfidenceK;
+            _stabilityWindowNumeric.Value = parameters.StabilityWindow;
             _voltageStepNumeric.Value = (decimal)parameters.VoltageStepSize;
             _minVoltageNumeric.Value = (decimal)parameters.MinVoltage;
             _maxVoltageNumeric.Value = (decimal)parameters.MaxVoltage;

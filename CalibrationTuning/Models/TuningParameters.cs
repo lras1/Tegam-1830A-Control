@@ -21,9 +21,22 @@ namespace CalibrationTuning.Models
         public double TargetPowerDbm { get; set; }
 
         /// <summary>
-        /// Acceptable tolerance in dB for convergence.
+        /// Maximum acceptable standard deviation in dB for stability.
+        /// Measurements must be repeatable within this spread.
         /// </summary>
-        public double ToleranceDb { get; set; }
+        public double MaxStdDevDb { get; set; } = 0.5;
+
+        /// <summary>
+        /// Confidence level multiplier (k-factor).
+        /// 2 = ~95% confidence, 3 = ~99.7% confidence.
+        /// Stability requires |mean - target| &lt;= k * stdDev.
+        /// </summary>
+        public double ConfidenceK { get; set; } = 2.0;
+
+        /// <summary>
+        /// Number of recent samples to evaluate for stability.
+        /// </summary>
+        public int StabilityWindow { get; set; } = 10;
 
         /// <summary>
         /// Voltage adjustment step size.
@@ -53,7 +66,6 @@ namespace CalibrationTuning.Models
 
         /// <summary>
         /// Delay between measurement samples in milliseconds.
-        /// Controls the sample rate during tuning. Default is 500ms.
         /// </summary>
         public int SampleDelayMs { get; set; } = 500;
     }
