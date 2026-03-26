@@ -337,11 +337,11 @@ namespace CalibrationTuning.UserControls
             {
                 Location = new Point(120, 88),
                 Size = new Size(150, 20),
-                Minimum = 1,
-                Maximum = 10000,
+                Minimum = 0,
+                Maximum = 1000000,
                 DecimalPlaces = 0,
-                Value = 100,
-                Increment = 10
+                Value = 0,
+                Increment = 100
             };
 
             _safetyLimitsGroup.Controls.Add(_minVoltageLabel);
@@ -352,6 +352,17 @@ namespace CalibrationTuning.UserControls
             _safetyLimitsGroup.Controls.Add(_maxVoltageUnitLabel);
             _safetyLimitsGroup.Controls.Add(_maxIterationsLabel);
             _safetyLimitsGroup.Controls.Add(_maxIterationsNumeric);
+
+            var maxIterHint = new Label
+            {
+                Text = "(0 = continuous)",
+                Location = new Point(275, 90),
+                Size = new Size(100, 20),
+                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = Color.Gray,
+                Font = new Font(this.Font.FontFamily, 7.5f)
+            };
+            _safetyLimitsGroup.Controls.Add(maxIterHint);
 
             _sampleDelayLabel = new Label
             {
@@ -510,8 +521,11 @@ namespace CalibrationTuning.UserControls
                 // Disable controls during tuning
                 UpdateControlStates(isTuning: true);
 
-                // Start tuning on background thread to keep UI responsive
-                await Task.Run(() => _tuningController.StartTuningAsync(parameters));
+                // Start tuning asynchronously on background thread
+                await Task.Run(async () => await _tuningController.StartTuningAsync(parameters));
+                
+                // Re-enable controls after tuning completes
+                UpdateControlStates(isTuning: false);
             }
             catch (Exception ex)
             {
@@ -644,6 +658,7 @@ namespace CalibrationTuning.UserControls
 
         private void HandleError(string errorMessage)
         {
+            System.Diagnostics.Debug.WriteLine($"[TuningPanel] Error: {errorMessage}");
             // Re-enable controls after error
             UpdateControlStates(isTuning: false);
         }

@@ -21,6 +21,7 @@ namespace CalibrationTuning.Controllers
 
         // State tracking
         private TuningState _currentState;
+        private volatile bool _stopRequested;
         private TuningParameters _parameters;
         private TuningStatistics _statistics;
 
@@ -317,6 +318,7 @@ namespace CalibrationTuning.Controllers
             {
                 CurrentState = TuningState.Error;
                 OnErrorOccurred("Invalid SensorId. Must be 1 or 2.");
+                CurrentState = TuningState.Idle;
                 return;
             }
 
@@ -336,6 +338,7 @@ namespace CalibrationTuning.Controllers
             _parameters = parameters;
             _statistics = new TuningStatistics();
             _statistics.CurrentVoltage = parameters.InitialVoltage;
+            _stopRequested = false;
 
             var startTime = DateTime.Now;
 
@@ -343,6 +346,7 @@ namespace CalibrationTuning.Controllers
             {
                 CurrentState = TuningState.Tuning;
                 OnUserActionOccurred("Start Tuning");
+                System.Diagnostics.Debug.WriteLine($"[TuningController] StartTuning: Freq={parameters.FrequencyHz}, Voltage={parameters.InitialVoltage}, Target={parameters.TargetPowerDbm}, SensorId={parameters.SensorId}");
 
                 // Configure signal generator frequency
                 var waveformParams = new Siglent.SDG6052X.DeviceLibrary.Models.WaveformParameters
@@ -353,55 +357,72 @@ namespace CalibrationTuning.Controllers
                     Load = Siglent.SDG6052X.DeviceLibrary.Models.LoadImpedance.HighZ
                 };
 
+                System.Diagnostics.Debug.WriteLine("[TuningController] Calling SetBasicWaveformAsync...");
                 var setWaveformResult = await _signalGeneratorService.SetBasicWaveformAsync(
                     1, 
                     Siglent.SDG6052X.DeviceLibrary.Models.WaveformType.Sine, 
-                    waveformParams);
+                    waveformParams).ConfigureAwait(false);
+                System.Diagnostics.Debug.WriteLine($"[TuningController] SetBasicWaveform result: Success={setWaveformResult.Success}, Message={setWaveformResult.Message}");
 
                 if (!setWaveformResult.Success)
                 {
                     CurrentState = TuningState.Error;
                     System.Diagnostics.Debug.WriteLine($"[TuningController] SetBasicWaveform FAILED: {setWaveformResult.Message}");
                     OnErrorOccurred("Failed to configure signal generator: " + setWaveformResult.Message);
+                    CurrentState = TuningState.Idle;
                     return;
                 }
 
                 // Configure power meter frequency
+                System.Diagnostics.Debug.WriteLine("[TuningController] Calling SetFrequency...");
                 var setFreqResult = _powerMeterService.SetFrequency(
                     parameters.FrequencyHz, 
                     Tegam._1830A.DeviceLibrary.Models.FrequencyUnit.Hz);
+                System.Diagnostics.Debug.WriteLine($"[TuningController] SetFrequency result: Success={setFreqResult.IsSuccess}, Error={setFreqResult.ErrorMessage}");
 
                 if (!setFreqResult.IsSuccess)
                 {
                     CurrentState = TuningState.Error;
                     System.Diagnostics.Debug.WriteLine($"[TuningController] SetFrequency FAILED: {setFreqResult.ErrorMessage}");
                     OnErrorOccurred("Failed to configure power meter frequency: " + setFreqResult.ErrorMessage);
+                    CurrentState = TuningState.Idle;
                     return;
                 }
 
                 // Configure power meter sensor
+                System.Diagnostics.Debug.WriteLine("[TuningController] Calling SelectSensor...");
                 var setSensorResult = _powerMeterService.SelectSensor(parameters.SensorId);
+                System.Diagnostics.Debug.WriteLine($"[TuningController] SelectSensor result: Success={setSensorResult.IsSuccess}");
                 if (!setSensorResult.IsSuccess)
                 {
                     CurrentState = TuningState.Error;
+                    System.Diagnostics.Debug.WriteLine($"[TuningController] SelectSensor FAILED: {setSensorResult.ErrorMessage}");
                     OnErrorOccurred("Failed to select power meter sensor: " + setSensorResult.ErrorMessage);
+                    CurrentState = TuningState.Idle;
                     return;
                 }
 
                 // Enable signal generator output
-                var enableOutputResult = await _signalGeneratorService.SetOutputStateAsync(1, true);
+                System.Diagnostics.Debug.WriteLine("[TuningController] Calling SetOutputStateAsync...");
+                var enableOutputResult = await _signalGeneratorService.SetOutputStateAsync(1, true).ConfigureAwait(false);
+                System.Diagnostics.Debug.WriteLine($"[TuningController] SetOutputState result: Success={enableOutputResult.Success}");
                 if (!enableOutputResult.Success)
                 {
                     CurrentState = TuningState.Error;
                     OnErrorOccurred("Failed to enable signal generator output: " + enableOutputResult.Message);
+                    CurrentState = TuningState.Idle;
                     return;
                 }
 
-                // Iterative measurement loop
-                for (int iteration = 1; iteration <= parameters.MaxIterations; iteration++)
+                System.Diagnostics.Debug.WriteLine($"[TuningController] Entering measurement loop, MaxIterations={parameters.MaxIterations}, SampleDelay={parameters.SampleDelayMs}ms");
+
+                // Iterative measurement loop (MaxIterations=0 means continuous until stopped)
+                bool continuous = parameters.MaxIterations == 0;
+                int maxIter = continuous ? int.MaxValue : parameters.MaxIterations;
+                for (int iteration = 1; iteration <= maxIter; iteration++)
                 {
-                    // Check if tuning was stopped
-                    if (CurrentState == TuningState.Aborted)
+                    // Check if stop was requested
+                    if (_stopRequested)
                     {
                         // Disable signal generator output
                         await _signalGeneratorService.SetOutputStateAsync(1, false);
@@ -418,23 +439,31 @@ namespace CalibrationTuning.Controllers
                         };
                         
                         OnTuningCompleted(abortResult);
+                        CurrentState = TuningState.Idle;
                         return;
                     }
 
                     _statistics.CurrentIteration = iteration;
                     CurrentState = TuningState.Measuring;
 
+                    if (iteration == 1)
+                        System.Diagnostics.Debug.WriteLine("[TuningController] First iteration starting...");
+
                     // Small delay for signal settling (configurable sample rate)
-                    await Task.Delay(parameters.SampleDelayMs);
+                    await Task.Delay(parameters.SampleDelayMs).ConfigureAwait(false);
 
                     // Measure current power
                     var powerMeasurement = _powerMeterService.MeasurePower();
+                    
+                    if (iteration == 1)
+                        System.Diagnostics.Debug.WriteLine($"[TuningController] First measurement: Power={powerMeasurement?.PowerValue}");
                     
                     if (powerMeasurement == null)
                     {
                         CurrentState = TuningState.Error;
                         await _signalGeneratorService.SetOutputStateAsync(1, false);
                         OnErrorOccurred("Failed to measure power from power meter");
+                        CurrentState = TuningState.Idle;
                         return;
                     }
 
@@ -471,6 +500,7 @@ namespace CalibrationTuning.Controllers
                                 
                                 OnTuningCompleted(overloadResult);
                                 OnErrorOccurred("Power meter overload detected: " + error.ErrorMessage);
+                                CurrentState = TuningState.Idle;
                                 return;
                             }
                         }
@@ -514,6 +544,7 @@ namespace CalibrationTuning.Controllers
                         };
                         
                         OnTuningCompleted(result);
+                        CurrentState = TuningState.Idle;
                         return;
                     }
 
@@ -549,6 +580,7 @@ namespace CalibrationTuning.Controllers
                         
                         OnTuningCompleted(result);
                         OnErrorOccurred("Maximum voltage limit exceeded");
+                        CurrentState = TuningState.Idle;
                         return;
                     }
 
@@ -570,6 +602,7 @@ namespace CalibrationTuning.Controllers
                         
                         OnTuningCompleted(result);
                         OnErrorOccurred("Minimum voltage limit exceeded");
+                        CurrentState = TuningState.Idle;
                         return;
                     }
 
@@ -594,6 +627,7 @@ namespace CalibrationTuning.Controllers
                         CurrentState = TuningState.Error;
                         await _signalGeneratorService.SetOutputStateAsync(1, false);
                         OnErrorOccurred("Failed to update signal generator voltage: " + updateResult.Message);
+                        CurrentState = TuningState.Idle;
                         return;
                     }
 
@@ -616,6 +650,7 @@ namespace CalibrationTuning.Controllers
                 };
                 
                 OnTuningCompleted(timeoutResult);
+                CurrentState = TuningState.Idle;
             }
             catch (Exception ex)
             {
@@ -644,6 +679,7 @@ namespace CalibrationTuning.Controllers
                 
                 OnTuningCompleted(errorResult);
                 OnErrorOccurred("Tuning error: " + ex.Message);
+                CurrentState = TuningState.Idle;
             }
         }
 
@@ -661,9 +697,8 @@ namespace CalibrationTuning.Controllers
                 return;
             }
 
-            // Transition to Aborted state
-            // The tuning loop will detect this state change and terminate
-            CurrentState = TuningState.Aborted;
+            // Set volatile flag so background thread sees it immediately
+            _stopRequested = true;
             OnUserActionOccurred("Stop Tuning");
         }
 

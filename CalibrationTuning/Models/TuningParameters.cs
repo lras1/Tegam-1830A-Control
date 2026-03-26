@@ -42,6 +42,7 @@ namespace CalibrationTuning.Models
 
         /// <summary>
         /// Maximum number of tuning iterations before timeout.
+        /// Set to 0 for continuous sampling (runs until stopped).
         /// </summary>
         public int MaxIterations { get; set; }
 
