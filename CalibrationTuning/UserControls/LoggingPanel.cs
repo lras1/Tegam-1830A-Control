@@ -1,5 +1,7 @@
 using System;
 using System.Drawing;
+using System.IO;
+using System.Text;
 using System.Windows.Forms;
 using CalibrationTuning.Controllers;
 using CalibrationTuning.Events;
@@ -18,6 +20,8 @@ namespace CalibrationTuning.UserControls
         // UI Controls - Data Grid
         private GroupBox _dataGridGroup;
         private DataGridView _dataGridView;
+        private Button _exportCsvButton;
+        private Button _clearButton;
 
         // Track pending scroll position for when control isn't visible
         private int _pendingScrollRowIndex = -1;
@@ -121,6 +125,34 @@ namespace CalibrationTuning.UserControls
             });
 
             _dataGridGroup.Controls.Add(_dataGridView);
+
+            // Toolbar panel with Export and Clear buttons
+            var toolbarPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 35,
+                Padding = new Padding(5)
+            };
+
+            _exportCsvButton = new Button
+            {
+                Text = "Export CSV",
+                Location = new Point(5, 5),
+                Size = new Size(90, 25)
+            };
+            _exportCsvButton.Click += ExportCsvButton_Click;
+            toolbarPanel.Controls.Add(_exportCsvButton);
+
+            _clearButton = new Button
+            {
+                Text = "Clear Log",
+                Location = new Point(100, 5),
+                Size = new Size(80, 25)
+            };
+            _clearButton.Click += (s, ev) => ClearDataGrid();
+            toolbarPanel.Controls.Add(_clearButton);
+
+            _dataGridGroup.Controls.Add(toolbarPanel);
             this.Controls.Add(_dataGridGroup);
 
             this.ResumeLayout(false);
@@ -316,6 +348,59 @@ namespace CalibrationTuning.UserControls
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error clearing data grid: {ex.Message}");
+            }
+        }
+
+        private void ExportCsvButton_Click(object sender, EventArgs e)
+        {
+            if (_dataGridView.Rows.Count == 0)
+            {
+                MessageBox.Show("No data to export.", "Export", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var dialog = new SaveFileDialog())
+            {
+                dialog.Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*";
+                dialog.DefaultExt = "csv";
+                dialog.FileName = $"measurements_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        var sb = new StringBuilder();
+
+                        // Header row
+                        for (int i = 0; i < _dataGridView.Columns.Count; i++)
+                        {
+                            if (i > 0) sb.Append(",");
+                            sb.Append(_dataGridView.Columns[i].HeaderText);
+                        }
+                        sb.AppendLine();
+
+                        // Data rows
+                        foreach (DataGridViewRow row in _dataGridView.Rows)
+                        {
+                            for (int i = 0; i < _dataGridView.Columns.Count; i++)
+                            {
+                                if (i > 0) sb.Append(",");
+                                string val = row.Cells[i].Value?.ToString() ?? "";
+                                if (val.Contains(",") || val.Contains("\""))
+                                    val = "\"" + val.Replace("\"", "\"\"") + "\"";
+                                sb.Append(val);
+                            }
+                            sb.AppendLine();
+                        }
+
+                        File.WriteAllText(dialog.FileName, sb.ToString());
+                        MessageBox.Show($"Exported {_dataGridView.Rows.Count} rows to:\n{dialog.FileName}", "Export Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Export failed: {ex.Message}", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
             }
         }
 
