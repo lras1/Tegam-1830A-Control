@@ -252,7 +252,7 @@ namespace Tegam._1830A.Tests.Unit
         public async Task SendCommandAsync_WithValidCommand_ReturnsSuccess()
         {
             _manager.Connect("TCPIP::192.168.1.100::INSTR");
-            var result = await _manager.SendCommandAsync("FREQ 2.4 GHz");
+            var result = await Task.Run(() => _manager.SendCommand("FREQ 2.4 GHz"));
             Assert.That(result.IsSuccess, Is.True);
         }
 
@@ -260,7 +260,7 @@ namespace Tegam._1830A.Tests.Unit
         public async Task QueryAsync_WithValidQuery_ReturnsResponse()
         {
             _manager.Connect("TCPIP::192.168.1.100::INSTR");
-            var result = await _manager.QueryAsync("FREQ?");
+            var result = await Task.Run(() => _manager.Query("FREQ?"));
             Assert.That(result, Is.Not.Null.And.Not.Empty);
         }
 
