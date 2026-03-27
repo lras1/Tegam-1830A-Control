@@ -628,6 +628,7 @@ namespace CalibrationTuning.UserControls
 
                 // Perform manual measurement with full details
                 var measurement = await _tuningController.MeasureManualWithDetailsAsync();
+                System.Diagnostics.Debug.WriteLine($"[TuningPanel] Manual measure result: IsValid={measurement.IsValid}, Freq={measurement.FrequencyHz}, Voltage={measurement.Voltage}, Power={measurement.PowerDbm}, Error={measurement.ErrorMessage}");
 
                 // Display result
                 if (measurement.IsValid)
