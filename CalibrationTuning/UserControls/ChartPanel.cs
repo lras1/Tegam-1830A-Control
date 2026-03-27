@@ -177,7 +177,7 @@ namespace CalibrationTuning.UserControls
             ConfigureChartArea(area);
             _manualChart.ChartAreas.Add(area);
 
-            _manualSeries = new Series("Manual") { ChartType = SeriesChartType.Point, Color = Color.Purple, MarkerStyle = MarkerStyle.Diamond, MarkerSize = 8 };
+            _manualSeries = new Series("Manual") { ChartType = SeriesChartType.Line, Color = Color.Purple, BorderWidth = 2, MarkerStyle = MarkerStyle.Diamond, MarkerSize = 6, MarkerColor = Color.Purple };
             _manualChart.Series.Add(_manualSeries);
 
             _manualAvgSeries = new Series("Running Avg") { ChartType = SeriesChartType.Line, Color = Color.DarkOrange, BorderWidth = 2 };
