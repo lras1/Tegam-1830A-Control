@@ -53,10 +53,22 @@ namespace CalibrationTuning.UserControls
             var splitContainer = new SplitContainer
             {
                 Dock = DockStyle.Fill,
-                Orientation = Orientation.Horizontal,
-                SplitterDistance = 300,
-                Panel1MinSize = 200,
-                Panel2MinSize = 200
+                Orientation = Orientation.Horizontal
+            };
+            // Defer splitter config until after layout to avoid size conflicts
+            splitContainer.SizeChanged += (s, ev) =>
+            {
+                if (splitContainer.Height > 100)
+                {
+                    splitContainer.SizeChanged -= null;
+                    try
+                    {
+                        splitContainer.Panel1MinSize = 50;
+                        splitContainer.Panel2MinSize = 50;
+                        splitContainer.SplitterDistance = splitContainer.Height / 2;
+                    }
+                    catch { }
+                }
             };
 
             // === Tuning panel (top) ===
