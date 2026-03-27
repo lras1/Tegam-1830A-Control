@@ -634,12 +634,15 @@ namespace CalibrationTuning.UserControls
                 {
                     _manualIteration++;
 
+                    // Use the frequency from the UI to match tuning data
+                    double frequencyHz = (double)_frequencyNumeric.Value;
+
                     // Add data row to LoggingPanel
                     if (_mainForm.LoggingPanel != null)
                     {
                         _mainForm.LoggingPanel.AddDataRow(
                             _manualIteration,
-                            measurement.FrequencyHz,
+                            frequencyHz,
                             measurement.Voltage,
                             measurement.PowerDbm,
                             "Manual"
@@ -657,7 +660,7 @@ namespace CalibrationTuning.UserControls
 
                     MessageBox.Show(
                         $"Manual Measurement:\n\n" +
-                        $"Frequency: {measurement.FrequencyHz:F0} Hz\n" +
+                        $"Frequency: {frequencyHz:F0} Hz\n" +
                         $"Voltage: {measurement.Voltage:F4} V\n" +
                         $"Power: {measurement.PowerDbm:F3} dBm\n" +
                         $"Timestamp: {measurement.Timestamp:yyyy-MM-dd HH:mm:ss.fff}",
