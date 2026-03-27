@@ -54,9 +54,9 @@ namespace CalibrationTuning.UserControls
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Horizontal,
-                SplitterDistance = 350,
-                Panel1MinSize = 150,
-                Panel2MinSize = 150
+                SplitterDistance = 300,
+                Panel1MinSize = 200,
+                Panel2MinSize = 200
             };
 
             // === Tuning panel (top) ===
@@ -65,7 +65,7 @@ namespace CalibrationTuning.UserControls
             tuningStatsPanel.Dock = DockStyle.Top;
             tuningGroup.Controls.Add(tuningStatsPanel);
 
-            _tuningChart = new Chart { Dock = DockStyle.Fill };
+            _tuningChart = new Chart { Dock = DockStyle.Fill, MinimumSize = new Size(100, 100) };
             InitializeTuningChart();
             tuningGroup.Controls.Add(_tuningChart);
             _tuningChart.BringToFront();
@@ -79,7 +79,7 @@ namespace CalibrationTuning.UserControls
             manualStatsPanel.Dock = DockStyle.Top;
             manualGroup.Controls.Add(manualStatsPanel);
 
-            _manualChart = new Chart { Dock = DockStyle.Fill };
+            _manualChart = new Chart { Dock = DockStyle.Fill, MinimumSize = new Size(100, 100) };
             InitializeManualChart();
             manualGroup.Controls.Add(_manualChart);
             _manualChart.BringToFront();
