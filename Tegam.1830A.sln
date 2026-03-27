@@ -12,11 +12,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tegam.1830A.WinFormsUI", "T
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CalibrationTuning.Tests", "CalibrationTuning.Tests\CalibrationTuning.Tests.csproj", "{F7A8B9C0-D1E2-4F3A-B4C5-D6E7F8A9B0C1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Siglent.SDG6052X.WinFormsUI", "Siglent.SDG6052X.WinFormsUI\Siglent.SDG6052X.WinFormsUI.csproj", "{8B5E5A2D-9C3F-4E1B-A8D7-6F2E3C4D5E6F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Siglent.SDG6052X.WinFormsUI", "..\GitHub\Siglent.SDG6052X\Siglent.SDG6052X.WinFormsUI\Siglent.SDG6052X.WinFormsUI.csproj", "{8B5E5A2D-9C3F-4E1B-A8D7-6F2E3C4D5E6F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Siglent.SDG6052X.DeviceLibrary", "Siglent.SDG6052X.DeviceLibrary\Siglent.SDG6052X.DeviceLibrary.csproj", "{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Siglent.SDG6052X.DeviceLibrary", "..\GitHub\Siglent.SDG6052X\Siglent.SDG6052X.DeviceLibrary\Siglent.SDG6052X.DeviceLibrary.csproj", "{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Siglent.SDG6052X.Tests", "Siglent.SDG6052X.Tests\Siglent.SDG6052X.Tests.csproj", "{B2C3D4E5-F6A7-4B5C-9D0E-1F2A3B4C5D6E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Siglent.SDG6052X.Tests", "..\GitHub\Siglent.SDG6052X\Siglent.SDG6052X.Tests\Siglent.SDG6052X.Tests.csproj", "{B2C3D4E5-F6A7-4B5C-9D0E-1F2A3B4C5D6E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
