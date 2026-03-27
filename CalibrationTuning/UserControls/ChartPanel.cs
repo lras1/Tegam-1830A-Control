@@ -10,40 +10,37 @@ using CalibrationTuning.Models;
 
 namespace CalibrationTuning.UserControls
 {
-    /// <summary>
-    /// User control for displaying real-time power measurement chart with
-    /// scroll/zoom, running average, and stability statistics.
-    /// </summary>
     public partial class ChartPanel : UserControl
     {
         private readonly ITuningController _tuningController;
-        private Chart _chart;
-        private Series _measurementSeries;
-        private Series _manualSeries;
+
+        // Tuning chart
+        private Chart _tuningChart;
+        private Series _tuningSeries;
         private Series _runningAvgSeries;
-        private Series _targetLineSeries;
-        private Series _upperToleranceSeries;
-        private Series _lowerToleranceSeries;
-
-        // Statistics panel
-        private GroupBox _statsGroup;
-        private Label _countValue;
-        private Label _avgValue;
-        private Label _stdDevValue;
-        private Label _minValue;
-        private Label _maxValue;
-        private Label _stabilityValue;
-        private NumericUpDown _windowSizeNumeric;
-
-        // Running statistics data
-        private readonly List<double> _powerValues = new List<double>();
+        private Series _targetSeries;
+        private Series _upperTolSeries;
+        private Series _lowerTolSeries;
+        private readonly List<double> _tuningValues = new List<double>();
+        private int _tuningPointIndex = 0;
         private int _runningAvgWindow = 10;
-        private int _dataPointIndex = 0;
+
+        // Tuning stats labels
+        private Label _tCountVal, _tAvgVal, _tStdDevVal, _tMinVal, _tMaxVal, _tStabilityVal;
+
+        // Manual chart
+        private Chart _manualChart;
+        private Series _manualSeries;
+        private Series _manualAvgSeries;
+        private readonly List<double> _manualValues = new List<double>();
+        private int _manualPointIndex = 0;
+
+        // Manual stats labels
+        private Label _mCountVal, _mAvgVal, _mStdDevVal, _mMinVal, _mMaxVal;
 
         public ChartPanel(ITuningController tuningController)
         {
             _tuningController = tuningController ?? throw new ArgumentNullException(nameof(tuningController));
-
             InitializeComponent();
             InitializeUI();
             SubscribeToEvents();
@@ -53,455 +50,303 @@ namespace CalibrationTuning.UserControls
         {
             this.SuspendLayout();
 
-            // Statistics panel at top
-            _statsGroup = new GroupBox
+            var splitContainer = new SplitContainer
             {
-                Text = "Power Statistics",
-                Dock = DockStyle.Top,
-                Height = 80,
-                Padding = new Padding(10, 5, 10, 5)
+                Dock = DockStyle.Fill,
+                Orientation = Orientation.Horizontal,
+                SplitterDistance = 350,
+                Panel1MinSize = 150,
+                Panel2MinSize = 150
             };
 
-            int x = 15, y = 20, colWidth = 130;
+            // === Tuning panel (top) ===
+            var tuningGroup = new GroupBox { Text = "Tuning Measurements", Dock = DockStyle.Fill };
+            var tuningStatsPanel = CreateStatsRow(out _tCountVal, out _tAvgVal, out _tStdDevVal, out _tMinVal, out _tMaxVal, out _tStabilityVal);
+            tuningStatsPanel.Dock = DockStyle.Top;
+            tuningGroup.Controls.Add(tuningStatsPanel);
 
-            AddStatLabel(_statsGroup, "Samples:", ref x, y);
-            _countValue = AddStatValue(_statsGroup, "0", ref x, y, colWidth);
+            _tuningChart = new Chart { Dock = DockStyle.Fill };
+            InitializeTuningChart();
+            tuningGroup.Controls.Add(_tuningChart);
+            _tuningChart.BringToFront();
 
-            AddStatLabel(_statsGroup, "Avg:", ref x, y);
-            _avgValue = AddStatValue(_statsGroup, "-- dBm", ref x, y, colWidth);
+            splitContainer.Panel1.Controls.Add(tuningGroup);
 
-            AddStatLabel(_statsGroup, "StdDev:", ref x, y);
-            _stdDevValue = AddStatValue(_statsGroup, "-- dB", ref x, y, colWidth);
+            // === Manual panel (bottom) ===
+            var manualGroup = new GroupBox { Text = "Manual Measurements", Dock = DockStyle.Fill };
+            Label dummyStability;
+            var manualStatsPanel = CreateStatsRow(out _mCountVal, out _mAvgVal, out _mStdDevVal, out _mMinVal, out _mMaxVal, out dummyStability);
+            manualStatsPanel.Dock = DockStyle.Top;
+            manualGroup.Controls.Add(manualStatsPanel);
 
-            x = 15; y = 45;
-            AddStatLabel(_statsGroup, "Min:", ref x, y);
-            _minValue = AddStatValue(_statsGroup, "-- dBm", ref x, y, colWidth);
+            _manualChart = new Chart { Dock = DockStyle.Fill };
+            InitializeManualChart();
+            manualGroup.Controls.Add(_manualChart);
+            _manualChart.BringToFront();
 
-            AddStatLabel(_statsGroup, "Max:", ref x, y);
-            _maxValue = AddStatValue(_statsGroup, "-- dBm", ref x, y, colWidth);
+            splitContainer.Panel2.Controls.Add(manualGroup);
 
-            AddStatLabel(_statsGroup, "Stability:", ref x, y);
-            _stabilityValue = AddStatValue(_statsGroup, "--", ref x, y, colWidth);
-            _stabilityValue.Font = new Font(_stabilityValue.Font, FontStyle.Bold);
-
-            // Window size control
-            var windowLabel = new Label
-            {
-                Text = "Avg Window:",
-                Location = new Point(x + 10, y),
-                Size = new Size(70, 20),
-                TextAlign = ContentAlignment.MiddleLeft
-            };
-            _statsGroup.Controls.Add(windowLabel);
-
-            _windowSizeNumeric = new NumericUpDown
-            {
-                Location = new Point(x + 82, y),
-                Size = new Size(55, 20),
-                Minimum = 2,
-                Maximum = 100,
-                Value = 10
-            };
-            _windowSizeNumeric.ValueChanged += (s, e) => { _runningAvgWindow = (int)_windowSizeNumeric.Value; RecalculateRunningAverage(); };
-            _statsGroup.Controls.Add(_windowSizeNumeric);
-
-            this.Controls.Add(_statsGroup);
-
-            // Chart fills remaining space
-            _chart = new Chart { Dock = DockStyle.Fill };
-            InitializeChart();
-            this.Controls.Add(_chart);
-
-            // Chart must be added before statsGroup so Dock.Fill works under Dock.Top
-            _chart.BringToFront();
-
+            this.Controls.Add(splitContainer);
             this.ResumeLayout(false);
         }
 
-        private Label AddStatLabel(Control parent, string text, ref int x, int y)
+        private Panel CreateStatsRow(out Label countVal, out Label avgVal, out Label stdDevVal, out Label minVal, out Label maxVal, out Label stabilityVal)
         {
-            var lbl = new Label { Text = text, Location = new Point(x, y), Size = new Size(50, 20), TextAlign = ContentAlignment.MiddleRight };
-            parent.Controls.Add(lbl);
-            x += 52;
+            var panel = new Panel { Height = 30 };
+            int x = 10;
+            AddLabel(panel, "N:", ref x); countVal = AddValue(panel, "0", ref x);
+            AddLabel(panel, "Avg:", ref x); avgVal = AddValue(panel, "--", ref x);
+            AddLabel(panel, "σ:", ref x); stdDevVal = AddValue(panel, "--", ref x);
+            AddLabel(panel, "Min:", ref x); minVal = AddValue(panel, "--", ref x);
+            AddLabel(panel, "Max:", ref x); maxVal = AddValue(panel, "--", ref x);
+            AddLabel(panel, "Stab:", ref x); stabilityVal = AddValue(panel, "--", ref x);
+            stabilityVal.Font = new Font(stabilityVal.Font, FontStyle.Bold);
+            return panel;
+        }
+
+        private void AddLabel(Control p, string text, ref int x)
+        {
+            p.Controls.Add(new Label { Text = text, Location = new Point(x, 5), Size = new Size(30, 20), TextAlign = ContentAlignment.MiddleRight });
+            x += 32;
+        }
+
+        private Label AddValue(Control p, string text, ref int x)
+        {
+            var lbl = new Label { Text = text, Location = new Point(x, 5), Size = new Size(80, 20), TextAlign = ContentAlignment.MiddleLeft, ForeColor = Color.DarkBlue };
+            p.Controls.Add(lbl);
+            x += 82;
             return lbl;
         }
 
-        private Label AddStatValue(Control parent, string text, ref int x, int y, int colWidth)
+        private void ConfigureChartArea(ChartArea area)
         {
-            var lbl = new Label { Text = text, Location = new Point(x, y), Size = new Size(75, 20), TextAlign = ContentAlignment.MiddleLeft, ForeColor = Color.DarkBlue };
-            parent.Controls.Add(lbl);
-            x += colWidth - 52;
-            return lbl;
+            area.AxisX.Title = "Sample #";
+            area.AxisX.MajorGrid.LineColor = Color.LightGray;
+            area.AxisY.Title = "Power (dBm)";
+            area.AxisY.MajorGrid.LineColor = Color.LightGray;
+            area.CursorX.IsUserEnabled = true;
+            area.CursorX.IsUserSelectionEnabled = true;
+            area.CursorY.IsUserEnabled = true;
+            area.CursorY.IsUserSelectionEnabled = true;
+            area.AxisX.ScaleView.Zoomable = true;
+            area.AxisY.ScaleView.Zoomable = true;
+            area.AxisX.ScrollBar.IsPositionedInside = true;
+            area.AxisY.ScrollBar.IsPositionedInside = true;
         }
 
-        private void InitializeChart()
+        private void InitializeTuningChart()
         {
-            var chartArea = new ChartArea("MainArea");
-            chartArea.AxisX.Title = "Sample #";
-            chartArea.AxisX.MajorGrid.Enabled = true;
-            chartArea.AxisX.MajorGrid.LineColor = Color.LightGray;
-            chartArea.AxisY.Title = "Power (dBm)";
-            chartArea.AxisY.MajorGrid.Enabled = true;
-            chartArea.AxisY.MajorGrid.LineColor = Color.LightGray;
+            var area = new ChartArea("TuningArea");
+            ConfigureChartArea(area);
+            _tuningChart.ChartAreas.Add(area);
 
-            // Enable scroll and zoom
-            chartArea.CursorX.IsUserEnabled = true;
-            chartArea.CursorX.IsUserSelectionEnabled = true;
-            chartArea.CursorY.IsUserEnabled = true;
-            chartArea.CursorY.IsUserSelectionEnabled = true;
-            chartArea.AxisX.ScaleView.Zoomable = true;
-            chartArea.AxisY.ScaleView.Zoomable = true;
-            chartArea.AxisX.ScrollBar.IsPositionedInside = true;
-            chartArea.AxisY.ScrollBar.IsPositionedInside = true;
+            _tuningSeries = new Series("Tuning") { ChartType = SeriesChartType.Line, Color = Color.Blue, BorderWidth = 2, MarkerStyle = MarkerStyle.Circle, MarkerSize = 4 };
+            _tuningChart.Series.Add(_tuningSeries);
 
-            _chart.ChartAreas.Add(chartArea);
+            _runningAvgSeries = new Series("Running Avg") { ChartType = SeriesChartType.Line, Color = Color.DarkOrange, BorderWidth = 2 };
+            _tuningChart.Series.Add(_runningAvgSeries);
 
-            _measurementSeries = new Series("Measurements")
-            {
-                ChartType = SeriesChartType.Line,
-                Color = Color.Blue,
-                BorderWidth = 2,
-                MarkerStyle = MarkerStyle.Circle,
-                MarkerSize = 5,
-                MarkerColor = Color.Blue
-            };
-            _chart.Series.Add(_measurementSeries);
+            _targetSeries = new Series("Target") { ChartType = SeriesChartType.Line, Color = Color.Green, BorderWidth = 2, BorderDashStyle = ChartDashStyle.Dash };
+            _tuningChart.Series.Add(_targetSeries);
 
-            _manualSeries = new Series("Manual")
-            {
-                ChartType = SeriesChartType.Point,
-                Color = Color.Purple,
-                MarkerStyle = MarkerStyle.Diamond,
-                MarkerSize = 8,
-                MarkerColor = Color.Purple
-            };
-            _chart.Series.Add(_manualSeries);
+            _upperTolSeries = new Series("Upper Tol") { ChartType = SeriesChartType.Line, Color = Color.Red, BorderWidth = 1, BorderDashStyle = ChartDashStyle.Dash };
+            _tuningChart.Series.Add(_upperTolSeries);
 
-            _runningAvgSeries = new Series("Running Avg")
-            {
-                ChartType = SeriesChartType.Line,
-                Color = Color.DarkOrange,
-                BorderWidth = 2,
-                BorderDashStyle = ChartDashStyle.Solid
-            };
-            _chart.Series.Add(_runningAvgSeries);
+            _lowerTolSeries = new Series("Lower Tol") { ChartType = SeriesChartType.Line, Color = Color.Red, BorderWidth = 1, BorderDashStyle = ChartDashStyle.Dash };
+            _tuningChart.Series.Add(_lowerTolSeries);
 
-            _targetLineSeries = new Series("Target")
-            {
-                ChartType = SeriesChartType.Line,
-                Color = Color.Green,
-                BorderWidth = 2,
-                BorderDashStyle = ChartDashStyle.Dash
-            };
-            _chart.Series.Add(_targetLineSeries);
-
-            _upperToleranceSeries = new Series("Upper Tol")
-            {
-                ChartType = SeriesChartType.Line,
-                Color = Color.Red,
-                BorderWidth = 1,
-                BorderDashStyle = ChartDashStyle.Dash
-            };
-            _chart.Series.Add(_upperToleranceSeries);
-
-            _lowerToleranceSeries = new Series("Lower Tol")
-            {
-                ChartType = SeriesChartType.Line,
-                Color = Color.Red,
-                BorderWidth = 1,
-                BorderDashStyle = ChartDashStyle.Dash
-            };
-            _chart.Series.Add(_lowerToleranceSeries);
-
-            var legend = new Legend("MainLegend") { Docking = Docking.Top, Alignment = StringAlignment.Far };
-            _chart.Legends.Add(legend);
-
-            // Mouse wheel zoom
-            _chart.MouseWheel += Chart_MouseWheel;
+            _tuningChart.Legends.Add(new Legend { Docking = Docking.Top, Alignment = StringAlignment.Far });
+            _tuningChart.MouseWheel += (s, e) => HandleZoom(_tuningChart, e);
         }
 
-        private void Chart_MouseWheel(object sender, MouseEventArgs e)
+        private void InitializeManualChart()
+        {
+            var area = new ChartArea("ManualArea");
+            ConfigureChartArea(area);
+            _manualChart.ChartAreas.Add(area);
+
+            _manualSeries = new Series("Manual") { ChartType = SeriesChartType.Point, Color = Color.Purple, MarkerStyle = MarkerStyle.Diamond, MarkerSize = 8 };
+            _manualChart.Series.Add(_manualSeries);
+
+            _manualAvgSeries = new Series("Running Avg") { ChartType = SeriesChartType.Line, Color = Color.DarkOrange, BorderWidth = 2 };
+            _manualChart.Series.Add(_manualAvgSeries);
+
+            _manualChart.Legends.Add(new Legend { Docking = Docking.Top, Alignment = StringAlignment.Far });
+            _manualChart.MouseWheel += (s, e) => HandleZoom(_manualChart, e);
+        }
+
+        private void HandleZoom(Chart chart, MouseEventArgs e)
         {
             try
             {
-                var area = _chart.ChartAreas[0];
+                var area = chart.ChartAreas[0];
                 if (e.Delta > 0)
                 {
                     double xMin = area.AxisX.ScaleView.ViewMinimum;
                     double xMax = area.AxisX.ScaleView.ViewMaximum;
-                    double xCenter = (xMin + xMax) / 2;
-                    double xRange = (xMax - xMin) / 2;
-                    area.AxisX.ScaleView.Zoom(xCenter - xRange * 0.5, xCenter + xRange * 0.5);
+                    double c = (xMin + xMax) / 2, r = (xMax - xMin) / 2;
+                    area.AxisX.ScaleView.Zoom(c - r * 0.5, c + r * 0.5);
                 }
-                else
-                {
-                    area.AxisX.ScaleView.ZoomReset();
-                    area.AxisY.ScaleView.ZoomReset();
-                }
+                else { area.AxisX.ScaleView.ZoomReset(); area.AxisY.ScaleView.ZoomReset(); }
             }
             catch { }
         }
 
         private void SubscribeToEvents()
         {
-            _tuningController.ProgressUpdated += TuningController_ProgressUpdated;
-            _tuningController.StateChanged += TuningController_StateChanged;
-        }
-
-        private void TuningController_StateChanged(object sender, TuningStateChangedEventArgs e)
-        {
-            if (e.NewState == TuningState.Tuning && e.PreviousState == TuningState.Idle)
+            _tuningController.ProgressUpdated += (s, e) => { if (e.Statistics != null) AddDataPoint(e.Statistics.CurrentIteration, e.Statistics.CurrentPowerDbm); };
+            _tuningController.StateChanged += (s, e) =>
             {
-                if (_tuningController.Parameters != null)
-                {
-                    SetTargetAndTolerance(
-                        _tuningController.Parameters.TargetPowerDbm,
-                        _tuningController.Parameters.MaxStdDevDb * _tuningController.Parameters.ConfidenceK
-                    );
-                }
-            }
-        }
-
-        private void TuningController_ProgressUpdated(object sender, TuningProgressEventArgs e)
-        {
-            if (e.Statistics != null)
-            {
-                AddDataPoint(e.Statistics.CurrentIteration, e.Statistics.CurrentPowerDbm);
-            }
+                if (e.NewState == TuningState.Tuning && e.PreviousState == TuningState.Idle && _tuningController.Parameters != null)
+                    SetTargetAndTolerance(_tuningController.Parameters.TargetPowerDbm, _tuningController.Parameters.MaxStdDevDb * _tuningController.Parameters.ConfidenceK);
+            };
         }
 
         public void AddDataPoint(int iteration, double powerDbm)
         {
-            if (this.InvokeRequired)
-            {
-                this.Invoke(new Action(() => AddDataPoint(iteration, powerDbm)));
-                return;
-            }
-
+            if (this.InvokeRequired) { this.Invoke(new Action(() => AddDataPoint(iteration, powerDbm))); return; }
             try
             {
-                _dataPointIndex++;
-                _powerValues.Add(powerDbm);
-                _measurementSeries.Points.AddXY(_dataPointIndex, powerDbm);
+                _tuningPointIndex++;
+                _tuningValues.Add(powerDbm);
+                _tuningSeries.Points.AddXY(_tuningPointIndex, powerDbm);
 
-                // Calculate and add running average point
-                if (_powerValues.Count >= _runningAvgWindow)
+                if (_tuningValues.Count >= _runningAvgWindow)
                 {
-                    double avg = _powerValues.Skip(_powerValues.Count - _runningAvgWindow).Take(_runningAvgWindow).Average();
-                    _runningAvgSeries.Points.AddXY(_dataPointIndex, avg);
+                    double avg = _tuningValues.Skip(_tuningValues.Count - _runningAvgWindow).Take(_runningAvgWindow).Average();
+                    _runningAvgSeries.Points.AddXY(_tuningPointIndex, avg);
                 }
 
-                // Extend target/tolerance lines to current X
-                int maxX = Math.Max(_dataPointIndex, _manualSeries.Points.Count > 0 ? (int)_manualSeries.Points[_manualSeries.Points.Count - 1].XValue : 0);
-                ExtendHorizontalLines(maxX);
-
-                UpdateStatistics();
-
-                if (_measurementSeries.Points.Count > 0)
-                {
-                    _chart.ChartAreas[0].RecalculateAxesScale();
-                }
+                ExtendHorizontalLines(_tuningPointIndex);
+                UpdateTuningStats();
+                _tuningChart.ChartAreas[0].RecalculateAxesScale();
             }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error adding data point to chart: {ex.Message}");
-            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Error adding tuning point: {ex.Message}"); }
         }
 
         public void AddManualDataPoint(int manualIteration, double powerDbm)
         {
-            if (this.InvokeRequired)
-            {
-                this.Invoke(new Action(() => AddManualDataPoint(manualIteration, powerDbm)));
-                return;
-            }
-
+            if (this.InvokeRequired) { this.Invoke(new Action(() => AddManualDataPoint(manualIteration, powerDbm))); return; }
             try
             {
-                _manualSeries.Points.AddXY(manualIteration, powerDbm);
+                _manualPointIndex++;
+                _manualValues.Add(powerDbm);
+                _manualSeries.Points.AddXY(_manualPointIndex, powerDbm);
 
-                if (_chart.ChartAreas.Count > 0)
+                if (_manualValues.Count >= _runningAvgWindow)
                 {
-                    _chart.ChartAreas[0].RecalculateAxesScale();
+                    double avg = _manualValues.Skip(_manualValues.Count - _runningAvgWindow).Take(_runningAvgWindow).Average();
+                    _manualAvgSeries.Points.AddXY(_manualPointIndex, avg);
                 }
+
+                UpdateManualStats();
+                _manualChart.ChartAreas[0].RecalculateAxesScale();
             }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error adding manual data point to chart: {ex.Message}");
-            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Error adding manual point: {ex.Message}"); }
         }
 
         private void ExtendHorizontalLines(int maxX)
         {
-            // Keep target/tolerance lines spanning the full X range
-            if (_targetLineSeries.Points.Count > 0)
+            ExtendLine(_targetSeries, maxX);
+            ExtendLine(_upperTolSeries, maxX);
+            ExtendLine(_lowerTolSeries, maxX);
+        }
+
+        private void ExtendLine(Series s, int maxX)
+        {
+            if (s.Points.Count > 0)
             {
-                double target = _targetLineSeries.Points[0].YValues[0];
-                _targetLineSeries.Points.Clear();
-                _targetLineSeries.Points.AddXY(0, target);
-                _targetLineSeries.Points.AddXY(maxX, target);
-            }
-            if (_upperToleranceSeries.Points.Count > 0)
-            {
-                double upper = _upperToleranceSeries.Points[0].YValues[0];
-                _upperToleranceSeries.Points.Clear();
-                _upperToleranceSeries.Points.AddXY(0, upper);
-                _upperToleranceSeries.Points.AddXY(maxX, upper);
-            }
-            if (_lowerToleranceSeries.Points.Count > 0)
-            {
-                double lower = _lowerToleranceSeries.Points[0].YValues[0];
-                _lowerToleranceSeries.Points.Clear();
-                _lowerToleranceSeries.Points.AddXY(0, lower);
-                _lowerToleranceSeries.Points.AddXY(maxX, lower);
+                double val = s.Points[0].YValues[0];
+                s.Points.Clear();
+                s.Points.AddXY(0, val);
+                s.Points.AddXY(maxX, val);
             }
         }
 
-        private void UpdateStatistics()
+        private void UpdateTuningStats()
         {
-            if (_powerValues.Count == 0) return;
-
-            int n = _powerValues.Count;
-            double avg = _powerValues.Average();
-            double min = _powerValues.Min();
-            double max = _powerValues.Max();
-            double variance = _powerValues.Sum(v => (v - avg) * (v - avg)) / n;
+            if (_tuningValues.Count == 0) return;
+            double avg = _tuningValues.Average(), min = _tuningValues.Min(), max = _tuningValues.Max();
+            double variance = _tuningValues.Sum(v => (v - avg) * (v - avg)) / _tuningValues.Count;
             double stdDev = Math.Sqrt(variance);
 
-            _countValue.Text = n.ToString();
-            _avgValue.Text = $"{avg:F3} dBm";
-            _stdDevValue.Text = $"{stdDev:F3} dB";
-            _minValue.Text = $"{min:F3} dBm";
-            _maxValue.Text = $"{max:F3} dBm";
+            _tCountVal.Text = _tuningValues.Count.ToString();
+            _tAvgVal.Text = $"{avg:F3}";
+            _tStdDevVal.Text = $"{stdDev:F3}";
+            _tMinVal.Text = $"{min:F3}";
+            _tMaxVal.Text = $"{max:F3}";
 
-            // Stability: check using statistical criteria from parameters
-            double maxStdDev = _tuningController.Parameters?.MaxStdDevDb ?? 0.5;
-            double confidenceK = _tuningController.Parameters?.ConfidenceK ?? 2.0;
+            double maxSD = _tuningController.Parameters?.MaxStdDevDb ?? 0.5;
+            double k = _tuningController.Parameters?.ConfidenceK ?? 2.0;
             double target = _tuningController.Parameters?.TargetPowerDbm ?? 0;
-            int stabWindow = _tuningController.Parameters?.StabilityWindow ?? _runningAvgWindow;
-            
-            if (_powerValues.Count >= stabWindow)
-            {
-                var recent = _powerValues.Skip(_powerValues.Count - stabWindow).ToList();
-                double recentAvg = recent.Average();
-                double recentVariance = recent.Sum(v => (v - recentAvg) * (v - recentAvg)) / recent.Count;
-                double recentStdDev = Math.Sqrt(recentVariance);
-                double meanError = Math.Abs(recentAvg - target);
+            int win = _tuningController.Parameters?.StabilityWindow ?? _runningAvgWindow;
 
-                // Stable: stdDev within limit AND mean within k*stdDev of target
-                bool stdDevOk = recentStdDev <= maxStdDev;
-                bool meanOk = meanError <= confidenceK * recentStdDev;
-
-                if (stdDevOk && meanOk)
-                {
-                    _stabilityValue.Text = $"STABLE (σ={recentStdDev:F2})";
-                    _stabilityValue.ForeColor = Color.Green;
-                }
-                else if (stdDevOk)
-                {
-                    _stabilityValue.Text = $"SETTLING (σ={recentStdDev:F2}, Δ={meanError:F2})";
-                    _stabilityValue.ForeColor = Color.Orange;
-                }
-                else
-                {
-                    _stabilityValue.Text = $"UNSTABLE (σ={recentStdDev:F2})";
-                    _stabilityValue.ForeColor = Color.Red;
-                }
-            }
-            else
+            if (_tuningValues.Count >= win)
             {
-                _stabilityValue.Text = $"Need {stabWindow} pts";
-                _stabilityValue.ForeColor = Color.Gray;
+                var recent = _tuningValues.Skip(_tuningValues.Count - win).ToList();
+                double rAvg = recent.Average();
+                double rVar = recent.Sum(v => (v - rAvg) * (v - rAvg)) / recent.Count;
+                double rSD = Math.Sqrt(rVar);
+                double err = Math.Abs(rAvg - target);
+
+                if (rSD <= maxSD && err <= k * rSD) { _tStabilityVal.Text = $"STABLE (σ={rSD:F2})"; _tStabilityVal.ForeColor = Color.Green; }
+                else if (rSD <= maxSD) { _tStabilityVal.Text = $"SETTLING (σ={rSD:F2})"; _tStabilityVal.ForeColor = Color.Orange; }
+                else { _tStabilityVal.Text = $"UNSTABLE (σ={rSD:F2})"; _tStabilityVal.ForeColor = Color.Red; }
             }
+            else { _tStabilityVal.Text = $"Need {win} pts"; _tStabilityVal.ForeColor = Color.Gray; }
         }
 
-        private void RecalculateRunningAverage()
+        private void UpdateManualStats()
         {
-            if (this.InvokeRequired)
-            {
-                this.Invoke(new Action(RecalculateRunningAverage));
-                return;
-            }
+            if (_manualValues.Count == 0) return;
+            double avg = _manualValues.Average(), min = _manualValues.Min(), max = _manualValues.Max();
+            double variance = _manualValues.Sum(v => (v - avg) * (v - avg)) / _manualValues.Count;
+            double stdDev = Math.Sqrt(variance);
 
-            _runningAvgSeries.Points.Clear();
-            for (int i = _runningAvgWindow - 1; i < _powerValues.Count; i++)
-            {
-                double avg = 0;
-                for (int j = i - _runningAvgWindow + 1; j <= i; j++)
-                    avg += _powerValues[j];
-                avg /= _runningAvgWindow;
-                _runningAvgSeries.Points.AddXY(i + 1, avg);
-            }
-            UpdateStatistics();
+            _mCountVal.Text = _manualValues.Count.ToString();
+            _mAvgVal.Text = $"{avg:F3}";
+            _mStdDevVal.Text = $"{stdDev:F3}";
+            _mMinVal.Text = $"{min:F3}";
+            _mMaxVal.Text = $"{max:F3}";
         }
 
         public void SetTargetAndTolerance(double targetDbm, double toleranceDb)
         {
-            if (this.InvokeRequired)
-            {
-                this.Invoke(new Action(() => SetTargetAndTolerance(targetDbm, toleranceDb)));
-                return;
-            }
-
+            if (this.InvokeRequired) { this.Invoke(new Action(() => SetTargetAndTolerance(targetDbm, toleranceDb))); return; }
             try
             {
-                _targetLineSeries.Points.Clear();
-                _upperToleranceSeries.Points.Clear();
-                _lowerToleranceSeries.Points.Clear();
-
-                int maxX = Math.Max(_dataPointIndex, 1);
-                _targetLineSeries.Points.AddXY(0, targetDbm);
-                _targetLineSeries.Points.AddXY(maxX, targetDbm);
-                _upperToleranceSeries.Points.AddXY(0, targetDbm + toleranceDb);
-                _upperToleranceSeries.Points.AddXY(maxX, targetDbm + toleranceDb);
-                _lowerToleranceSeries.Points.AddXY(0, targetDbm - toleranceDb);
-                _lowerToleranceSeries.Points.AddXY(maxX, targetDbm - toleranceDb);
+                int maxX = Math.Max(_tuningPointIndex, 1);
+                _targetSeries.Points.Clear(); _targetSeries.Points.AddXY(0, targetDbm); _targetSeries.Points.AddXY(maxX, targetDbm);
+                _upperTolSeries.Points.Clear(); _upperTolSeries.Points.AddXY(0, targetDbm + toleranceDb); _upperTolSeries.Points.AddXY(maxX, targetDbm + toleranceDb);
+                _lowerTolSeries.Points.Clear(); _lowerTolSeries.Points.AddXY(0, targetDbm - toleranceDb); _lowerTolSeries.Points.AddXY(maxX, targetDbm - toleranceDb);
             }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error setting target and tolerance: {ex.Message}");
-            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Error setting target: {ex.Message}"); }
         }
 
         public void ClearChart()
         {
-            if (this.InvokeRequired)
-            {
-                this.Invoke(new Action(ClearChart));
-                return;
-            }
+            if (this.InvokeRequired) { this.Invoke(new Action(ClearChart)); return; }
+            _tuningSeries.Points.Clear(); _runningAvgSeries.Points.Clear();
+            _targetSeries.Points.Clear(); _upperTolSeries.Points.Clear(); _lowerTolSeries.Points.Clear();
+            _manualSeries.Points.Clear(); _manualAvgSeries.Points.Clear();
+            _tuningValues.Clear(); _manualValues.Clear();
+            _tuningPointIndex = 0; _manualPointIndex = 0;
+            ResetLabels(_tCountVal, _tAvgVal, _tStdDevVal, _tMinVal, _tMaxVal, _tStabilityVal);
+            ResetLabels(_mCountVal, _mAvgVal, _mStdDevVal, _mMinVal, _mMaxVal, null);
+        }
 
-            try
-            {
-                _measurementSeries.Points.Clear();
-                _manualSeries.Points.Clear();
-                _runningAvgSeries.Points.Clear();
-                _targetLineSeries.Points.Clear();
-                _upperToleranceSeries.Points.Clear();
-                _lowerToleranceSeries.Points.Clear();
-                _powerValues.Clear();
-                _dataPointIndex = 0;
-                UpdateStatistics();
-                _countValue.Text = "0";
-                _avgValue.Text = "-- dBm";
-                _stdDevValue.Text = "-- dB";
-                _minValue.Text = "-- dBm";
-                _maxValue.Text = "-- dBm";
-                _stabilityValue.Text = "--";
-                _stabilityValue.ForeColor = Color.Gray;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error clearing chart: {ex.Message}");
-            }
+        private void ResetLabels(Label c, Label a, Label s, Label mn, Label mx, Label st)
+        {
+            c.Text = "0"; a.Text = "--"; s.Text = "--"; mn.Text = "--"; mx.Text = "--";
+            if (st != null) { st.Text = "--"; st.ForeColor = Color.Gray; }
         }
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
-                _tuningController.ProgressUpdated -= TuningController_ProgressUpdated;
-                _tuningController.StateChanged -= TuningController_StateChanged;
+                _tuningController.ProgressUpdated -= null;
+                _tuningController.StateChanged -= null;
             }
             base.Dispose(disposing);
         }
