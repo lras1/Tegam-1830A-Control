@@ -38,6 +38,11 @@ namespace CalibrationTuning.UserControls
         // Manual stats labels
         private Label _mCountVal, _mAvgVal, _mStdDevVal, _mMinVal, _mMaxVal;
 
+        // Manual chart target/tolerance
+        private Series _manualTargetSeries;
+        private Series _manualUpperTolSeries;
+        private Series _manualLowerTolSeries;
+
         public ChartPanel(ITuningController tuningController)
         {
             _tuningController = tuningController ?? throw new ArgumentNullException(nameof(tuningController));
@@ -183,6 +188,15 @@ namespace CalibrationTuning.UserControls
             _manualAvgSeries = new Series("Running Avg") { ChartType = SeriesChartType.Line, Color = Color.DarkOrange, BorderWidth = 2 };
             _manualChart.Series.Add(_manualAvgSeries);
 
+            _manualTargetSeries = new Series("Target") { ChartType = SeriesChartType.Line, Color = Color.Green, BorderWidth = 2, BorderDashStyle = ChartDashStyle.Dash };
+            _manualChart.Series.Add(_manualTargetSeries);
+
+            _manualUpperTolSeries = new Series("Upper Tol") { ChartType = SeriesChartType.Line, Color = Color.Red, BorderWidth = 1, BorderDashStyle = ChartDashStyle.Dash };
+            _manualChart.Series.Add(_manualUpperTolSeries);
+
+            _manualLowerTolSeries = new Series("Lower Tol") { ChartType = SeriesChartType.Line, Color = Color.Red, BorderWidth = 1, BorderDashStyle = ChartDashStyle.Dash };
+            _manualChart.Series.Add(_manualLowerTolSeries);
+
             _manualChart.Legends.Add(new Legend { Docking = Docking.Top, Alignment = StringAlignment.Far });
             _manualChart.MouseWheel += (s, e) => HandleZoom(_manualChart, e);
         }
@@ -251,6 +265,13 @@ namespace CalibrationTuning.UserControls
                     _manualAvgSeries.Points.AddXY(_manualPointIndex, avg);
                 }
 
+                // Update target/tolerance lines on manual chart
+                double target = _tuningController.Parameters?.TargetPowerDbm ?? 0;
+                double tol = (_tuningController.Parameters?.MaxStdDevDb ?? 0.5) * (_tuningController.Parameters?.ConfidenceK ?? 2.0);
+                ExtendLine(_manualTargetSeries, _manualPointIndex, target);
+                ExtendLine(_manualUpperTolSeries, _manualPointIndex, target + tol);
+                ExtendLine(_manualLowerTolSeries, _manualPointIndex, target - tol);
+
                 UpdateManualStats();
                 _manualChart.ChartAreas[0].RecalculateAxesScale();
             }
@@ -273,6 +294,13 @@ namespace CalibrationTuning.UserControls
                 s.Points.AddXY(0, val);
                 s.Points.AddXY(maxX, val);
             }
+        }
+
+        private void ExtendLine(Series s, int maxX, double val)
+        {
+            s.Points.Clear();
+            s.Points.AddXY(0, val);
+            s.Points.AddXY(maxX, val);
         }
 
         private void UpdateTuningStats()
@@ -341,6 +369,7 @@ namespace CalibrationTuning.UserControls
             _tuningSeries.Points.Clear(); _runningAvgSeries.Points.Clear();
             _targetSeries.Points.Clear(); _upperTolSeries.Points.Clear(); _lowerTolSeries.Points.Clear();
             _manualSeries.Points.Clear(); _manualAvgSeries.Points.Clear();
+            _manualTargetSeries.Points.Clear(); _manualUpperTolSeries.Points.Clear(); _manualLowerTolSeries.Points.Clear();
             _tuningValues.Clear(); _manualValues.Clear();
             _tuningPointIndex = 0; _manualPointIndex = 0;
             ResetLabels(_tCountVal, _tAvgVal, _tStdDevVal, _tMinVal, _tMaxVal, _tStabilityVal);
