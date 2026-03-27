@@ -53,9 +53,7 @@ namespace CalibrationTuning.UserControls
 
             _dataGridView = new DataGridView
             {
-                Location = new Point(10, 25),
-                Size = new Size(520, 50),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left,
+                Dock = DockStyle.Fill,
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 AllowUserToResizeRows = false,
@@ -124,9 +122,7 @@ namespace CalibrationTuning.UserControls
                 ReadOnly = true
             });
 
-            _dataGridGroup.Controls.Add(_dataGridView);
-
-            // Toolbar panel with Export and Clear buttons
+            // Toolbar panel with Export and Clear buttons (added first so it docks on top)
             var toolbarPanel = new Panel
             {
                 Dock = DockStyle.Top,
@@ -152,6 +148,8 @@ namespace CalibrationTuning.UserControls
             _clearButton.Click += (s, ev) => ClearDataGrid();
             toolbarPanel.Controls.Add(_clearButton);
 
+            // Add DataGridView first (Fill), then toolbar (Top) — WinForms docks last-added first
+            _dataGridGroup.Controls.Add(_dataGridView);
             _dataGridGroup.Controls.Add(toolbarPanel);
             this.Controls.Add(_dataGridGroup);
 
@@ -172,16 +170,6 @@ namespace CalibrationTuning.UserControls
         {
             if (_dataGridView.Visible)
             {
-                // Resize DataGridView to fill the GroupBox when it becomes visible
-                if (_dataGridGroup != null)
-                {
-                    var padding = _dataGridGroup.Padding;
-                    _dataGridView.Size = new Size(
-                        _dataGridGroup.ClientSize.Width - padding.Left - padding.Right,
-                        _dataGridGroup.ClientSize.Height - _dataGridView.Location.Y - padding.Bottom);
-                    _dataGridView.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
-                }
-
                 // Apply pending scroll position
                 if (_pendingScrollRowIndex >= 0 && _dataGridView.Rows.Count > 0)
                 {
