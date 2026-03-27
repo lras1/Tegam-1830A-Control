@@ -19,6 +19,7 @@ namespace CalibrationTuning.UserControls
         private readonly ITuningController _tuningController;
         private Chart _chart;
         private Series _measurementSeries;
+        private Series _manualSeries;
         private Series _runningAvgSeries;
         private Series _targetLineSeries;
         private Series _upperToleranceSeries;
@@ -166,6 +167,16 @@ namespace CalibrationTuning.UserControls
             };
             _chart.Series.Add(_measurementSeries);
 
+            _manualSeries = new Series("Manual")
+            {
+                ChartType = SeriesChartType.Point,
+                Color = Color.Purple,
+                MarkerStyle = MarkerStyle.Diamond,
+                MarkerSize = 8,
+                MarkerColor = Color.Purple
+            };
+            _chart.Series.Add(_manualSeries);
+
             _runningAvgSeries = new Series("Running Avg")
             {
                 ChartType = SeriesChartType.Line,
@@ -281,7 +292,8 @@ namespace CalibrationTuning.UserControls
                 }
 
                 // Extend target/tolerance lines to current X
-                ExtendHorizontalLines(_dataPointIndex);
+                int maxX = Math.Max(_dataPointIndex, _manualSeries.Points.Count > 0 ? (int)_manualSeries.Points[_manualSeries.Points.Count - 1].XValue : 0);
+                ExtendHorizontalLines(maxX);
 
                 UpdateStatistics();
 
@@ -293,6 +305,29 @@ namespace CalibrationTuning.UserControls
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error adding data point to chart: {ex.Message}");
+            }
+        }
+
+        public void AddManualDataPoint(int manualIteration, double powerDbm)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => AddManualDataPoint(manualIteration, powerDbm)));
+                return;
+            }
+
+            try
+            {
+                _manualSeries.Points.AddXY(manualIteration, powerDbm);
+
+                if (_chart.ChartAreas.Count > 0)
+                {
+                    _chart.ChartAreas[0].RecalculateAxesScale();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error adding manual data point to chart: {ex.Message}");
             }
         }
 
@@ -439,6 +474,7 @@ namespace CalibrationTuning.UserControls
             try
             {
                 _measurementSeries.Points.Clear();
+                _manualSeries.Points.Clear();
                 _runningAvgSeries.Points.Clear();
                 _targetLineSeries.Points.Clear();
                 _upperToleranceSeries.Points.Clear();

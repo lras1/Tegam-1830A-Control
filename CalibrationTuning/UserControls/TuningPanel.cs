@@ -67,8 +67,10 @@ namespace CalibrationTuning.UserControls
         private Button _stopTuningButton;
         private Button _manualMeasureButton;
         private Button _resetIterButton;
+        private Button _resetManualButton;
 
         private bool _devicesConnected = false;
+        private int _manualIteration = 0;
 
         public TuningPanel(ITuningController tuningController, MainForm mainForm)
         {
@@ -515,12 +517,22 @@ namespace CalibrationTuning.UserControls
             };
             _resetIterButton.Click += (s, ev) => _tuningController.ResetIterationCounter();
 
+            _resetManualButton = new Button
+            {
+                Text = "Reset Manual #",
+                Location = new Point(10, yPosition + 40),
+                Size = new Size(120, 30),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
+            };
+            _resetManualButton.Click += (s, ev) => { _manualIteration = 0; };
+
             this.Controls.Add(_startTuningButton);
             this.Controls.Add(_stopTuningButton);
             this.Controls.Add(_manualMeasureButton);
             this.Controls.Add(_resetIterButton);
+            this.Controls.Add(_resetManualButton);
 
-            yPosition += 45;
+            yPosition += 80;
 
             // Status Panel
             _statusPanel = new StatusPanel(_tuningController)
@@ -620,11 +632,13 @@ namespace CalibrationTuning.UserControls
                 // Display result
                 if (measurement.IsValid)
                 {
+                    _manualIteration++;
+
                     // Add data row to LoggingPanel
                     if (_mainForm.LoggingPanel != null)
                     {
                         _mainForm.LoggingPanel.AddDataRow(
-                            0, // iteration 0 for manual measurement
+                            _manualIteration,
                             measurement.FrequencyHz,
                             measurement.Voltage,
                             measurement.PowerDbm,
@@ -632,13 +646,13 @@ namespace CalibrationTuning.UserControls
                         );
                     }
 
-                    // Add data point to Chart
+                    // Add data point to Chart (separate manual series)
                     var chartPanel = _mainForm.ChartTab?.Controls.Count > 0 
                         ? _mainForm.ChartTab.Controls[0] as ChartPanel 
                         : null;
                     if (chartPanel != null)
                     {
-                        chartPanel.AddDataPoint(0, measurement.PowerDbm);
+                        chartPanel.AddManualDataPoint(_manualIteration, measurement.PowerDbm);
                     }
 
                     MessageBox.Show(
